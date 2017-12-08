@@ -14,6 +14,14 @@
   },
   "keywords": [],
   "author": "Justin Stone",
+  "bugs": {
+    "url": "https://github.com/jpstone/redux-pathspace/issues"
+  },
+  "homepage": "https://github.com/jpstone/redux-pathspace",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jpstone/redux-pathspace.git"
+  },
   "license": "MIT",
   "devDependencies": {
     "@babel/cli": "^7.0.0-beta.34",
