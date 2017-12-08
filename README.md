@@ -138,6 +138,8 @@ Creates a new function from which you can add action type/reducer pairs, a meta 
 
 - `path` (string|array|number) - Required. Create a new namespaced path with the given argument. If it's a string, it can be dot notation such as `foo.bar.baz`; if it's an Array it can consist of strings and numbers *without* dot notated strings `['foo', 'bar', 0]`; if it's a number (whether standalone or in an array) then it specifies an array index within your given path.
 
+Returns - (function) - A new `path` container.
+
 ### const createActionCreator = path({ [actionType], [reducer], [meta], [subPath] });
 
 Creates a new function used to create new action creators.
@@ -147,15 +149,27 @@ Creates a new function used to create new action creators.
 - `meta` (object) - Optional. Object to set on the `action.meta` property. Defaults to `{}`.
 - `subPath` (string|array|number) - Optional. If provided, all other arguments are ignored and a new `path` is returned.
 
+Returns - (function) - If a `subPath` is provided, a new `path` container. Otherwise, a new `createActionCreator`.
+
 ### const actionCreator = createActionCreator([payloadHandler]);
 
-Creates a new action creator to be used directly in dispatch calls.
+Returns a new action creator (function) to be used directly in dispatch calls.
 
-- `payloadHandler` (function) - Optional. This function gets passed the arguments supplied to `actionCreator` for further handling before getting set onto `action.payload`. If not supplied, a default `payloadHandler` is used, with the signature: `defaultPayloadHandler = payload -> payload`. A flux standard action is returned.
+- `payloadHandler` (function) - Optional. This function gets passed the arguments supplied to `actionCreator` for further handling before getting set onto `action.payload`. If not supplied, a default `payloadHandler` is used, with the signature: `defaultPayloadHandler = payload -> payload`.
+
+Returns - (function) - A new `actionCreator`.
+
+### const action = actionCreator([...args]);
+
+- `args` (any) - Optional. Will get passed to the specified `payloadHandler`, or use the default `payloadHandler` if none was provided (see examples above).
+
+Returns - (object) - A flux standard action (FSA).
 
 ### const reducer = createReducer(initialState);
 
-- `initialState` (string|array|number|object) - Required. Used to store the supplied initial state which is returned whenever the state passed to a reducer is `undefined`. A "root" reducer is returned which should get passed to `redux`'s `createStore`.
+- `initialState` (string|array|number|object) - Required. Used to store the supplied initial state which is returned whenever the state passed to a reducer is `undefined`.
+
+Returns - (function) - A "root" reducer which should get passed to `redux`'s `createStore`.
 
 ## Install
 
@@ -164,6 +178,10 @@ With [npm](https://npmjs.org/) installed, run
 ```sh
 $ npm install --save redux-pathspace
 ```
+
+## Acknowledgements
+
+As noted above, this library uses [Ramda](https://github.com/Ramda/ramda) lenses under the hood. The required Ramda functions are bundled with the distribution instead of requiring users of this lib to download the entire Ramda library as a dependency.
 
 ## License
 
