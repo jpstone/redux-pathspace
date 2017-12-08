@@ -1380,6 +1380,5 @@ var _createPathspace = createPathspace(),
 
 exports.createReducer = createReducer;
 exports.addPath = addPath;
-
 },{"ramda/src/lensPath":28,"ramda/src/lensProp":29,"ramda/src/set":34,"ramda/src/view":35}]},{},[36])(36)
 });
