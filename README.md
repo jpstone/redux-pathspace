@@ -134,9 +134,6 @@ import { addPath, createReducer } from 'redux-pathspace';
 
 ### const path = addPath(path);
 
-Creates a new function for adding new directories to an icebox. Both parameters
-are optional, and default to sane values.
-
 Creates a new function from which you can add action type/reducer pairs, a meta object (to be attached to the action), or create a sub-path
 
 - `path` (string|array|number) - Required. Create a new namespaced path with the given argument. If it's a string, it can be dot notation such as `foo.bar.baz`; if it's an Array it can consist of strings and numbers *without* dot notated strings `['foo', 'bar', 0]`; if it's a number (whether standalone or in an array) then it specifies an array index within your given path.
