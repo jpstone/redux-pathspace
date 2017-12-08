@@ -162,7 +162,7 @@ Creates a new action creator to be used directly in dispatch calls.
 With [npm](https://npmjs.org/) installed, run
 
 ```sh
-$ npm install redux-pathspace
+$ npm install --save redux-pathspace
 ```
 
 ## License
