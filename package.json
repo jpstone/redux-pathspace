@@ -12,7 +12,26 @@
     "pretest": "npm run clean",
     "prepublish": "npm run test"
   },
-  "keywords": [],
+  "keywords": [
+    "redux",
+    "lens",
+    "lenses",
+    "ramda",
+    "paths",
+    "namespace",
+    "react",
+    "state",
+    "state management",
+    "reducer",
+    "reducers",
+    "flux",
+    "flux standard actions",
+    "FSA",
+    "action",
+    "actions",
+    "action type",
+    "action types"
+  ],
   "author": "Justin Stone",
   "bugs": {
     "url": "https://github.com/jpstone/redux-pathspace/issues"
