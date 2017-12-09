@@ -38,7 +38,7 @@ Under the hood, each `path` you pass to `addPath` creates a new [Ramda](https://
 
 ## Usage
 
-`redux-pathspace` exports 2 functions: `addPath` & `createReducer`.
+`redux-pathspace` exports 3 functions: `addPath`, `createReducer`, and `getLens`. For more information on `getLens`, see the API documentation below as it's not needed for most use cases.
 
 First, `import` `createReducer`, pass it your initial state, and then pass the resulting function (your "root" reducer) to `redux`'s `createStore`:
 
