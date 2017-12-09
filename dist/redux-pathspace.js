@@ -1,4 +1,47 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.reduxPathspace = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var _concat = /*#__PURE__*/require('./internal/_concat');
+
+var _curry3 = /*#__PURE__*/require('./internal/_curry3');
+
+/**
+ * Applies a function to the value at the given index of an array, returning a
+ * new copy of the array with the element at the given index replaced with the
+ * result of the function application.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.14.0
+ * @category List
+ * @sig (a -> a) -> Number -> [a] -> [a]
+ * @param {Function} fn The function to apply.
+ * @param {Number} idx The index.
+ * @param {Array|Arguments} list An array-like object whose value
+ *        at the supplied index will be replaced.
+ * @return {Array} A copy of the supplied array-like object with
+ *         the element at index `idx` replaced with the value
+ *         returned by applying `fn` to the existing element.
+ * @see R.update
+ * @example
+ *
+ *      R.adjust(R.add(10), 1, [1, 2, 3]);     //=> [1, 12, 3]
+ *      R.adjust(R.add(10))(1)([1, 2, 3]);     //=> [1, 12, 3]
+ * @symb R.adjust(f, -1, [a, b]) = [a, f(b)]
+ * @symb R.adjust(f, 0, [a, b]) = [f(a), b]
+ */
+
+
+var adjust = /*#__PURE__*/_curry3(function adjust(fn, idx, list) {
+  if (idx >= list.length || idx < -list.length) {
+    return list;
+  }
+  var start = idx < 0 ? list.length : 0;
+  var _idx = start + idx;
+  var _list = _concat(list);
+  _list[_idx] = fn(list[_idx]);
+  return _list;
+});
+module.exports = adjust;
+},{"./internal/_concat":8,"./internal/_curry3":11}],2:[function(require,module,exports){
 var _curry1 = /*#__PURE__*/require('./internal/_curry1');
 
 /**
@@ -28,7 +71,7 @@ var always = /*#__PURE__*/_curry1(function always(val) {
   };
 });
 module.exports = always;
-},{"./internal/_curry1":7}],2:[function(require,module,exports){
+},{"./internal/_curry1":9}],3:[function(require,module,exports){
 var _curry3 = /*#__PURE__*/require('./internal/_curry3');
 
 /**
@@ -62,7 +105,7 @@ var assoc = /*#__PURE__*/_curry3(function assoc(prop, val, obj) {
   return result;
 });
 module.exports = assoc;
-},{"./internal/_curry3":9}],3:[function(require,module,exports){
+},{"./internal/_curry3":11}],4:[function(require,module,exports){
 var _curry3 = /*#__PURE__*/require('./internal/_curry3');
 
 var _has = /*#__PURE__*/require('./internal/_has');
@@ -119,7 +162,7 @@ var assocPath = /*#__PURE__*/_curry3(function assocPath(path, val, obj) {
   }
 });
 module.exports = assocPath;
-},{"./assoc":2,"./internal/_curry3":9,"./internal/_has":12,"./internal/_isArray":14,"./internal/_isInteger":16,"./isNil":25}],4:[function(require,module,exports){
+},{"./assoc":3,"./internal/_curry3":11,"./internal/_has":14,"./internal/_isArray":16,"./internal/_isInteger":18,"./isNil":27}],5:[function(require,module,exports){
 var _arity = /*#__PURE__*/require('./internal/_arity');
 
 var _curry2 = /*#__PURE__*/require('./internal/_curry2');
@@ -154,7 +197,7 @@ var bind = /*#__PURE__*/_curry2(function bind(fn, thisObj) {
   });
 });
 module.exports = bind;
-},{"./internal/_arity":6,"./internal/_curry2":8}],5:[function(require,module,exports){
+},{"./internal/_arity":7,"./internal/_curry2":10}],6:[function(require,module,exports){
 var _arity = /*#__PURE__*/require('./internal/_arity');
 
 var _curry1 = /*#__PURE__*/require('./internal/_curry1');
@@ -214,7 +257,7 @@ var curryN = /*#__PURE__*/_curry2(function curryN(length, fn) {
   return _arity(length, _curryN(length, [], fn));
 });
 module.exports = curryN;
-},{"./internal/_arity":6,"./internal/_curry1":7,"./internal/_curry2":8,"./internal/_curryN":10}],6:[function(require,module,exports){
+},{"./internal/_arity":7,"./internal/_curry1":9,"./internal/_curry2":10,"./internal/_curryN":12}],7:[function(require,module,exports){
 function _arity(n, fn) {
   /* eslint-disable no-unused-vars */
   switch (n) {
@@ -267,7 +310,40 @@ function _arity(n, fn) {
   }
 }
 module.exports = _arity;
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
+/**
+ * Private `concat` function to merge two array-like objects.
+ *
+ * @private
+ * @param {Array|Arguments} [set1=[]] An array-like object.
+ * @param {Array|Arguments} [set2=[]] An array-like object.
+ * @return {Array} A new, merged array.
+ * @example
+ *
+ *      _concat([4, 5, 6], [1, 2, 3]); //=> [4, 5, 6, 1, 2, 3]
+ */
+function _concat(set1, set2) {
+  set1 = set1 || [];
+  set2 = set2 || [];
+  var idx;
+  var len1 = set1.length;
+  var len2 = set2.length;
+  var result = [];
+
+  idx = 0;
+  while (idx < len1) {
+    result[result.length] = set1[idx];
+    idx += 1;
+  }
+  idx = 0;
+  while (idx < len2) {
+    result[result.length] = set2[idx];
+    idx += 1;
+  }
+  return result;
+}
+module.exports = _concat;
+},{}],9:[function(require,module,exports){
 var _isPlaceholder = /*#__PURE__*/require('./_isPlaceholder');
 
 /**
@@ -290,7 +366,7 @@ function _curry1(fn) {
   };
 }
 module.exports = _curry1;
-},{"./_isPlaceholder":17}],8:[function(require,module,exports){
+},{"./_isPlaceholder":19}],10:[function(require,module,exports){
 var _curry1 = /*#__PURE__*/require('./_curry1');
 
 var _isPlaceholder = /*#__PURE__*/require('./_isPlaceholder');
@@ -324,7 +400,7 @@ function _curry2(fn) {
   };
 }
 module.exports = _curry2;
-},{"./_curry1":7,"./_isPlaceholder":17}],9:[function(require,module,exports){
+},{"./_curry1":9,"./_isPlaceholder":19}],11:[function(require,module,exports){
 var _curry1 = /*#__PURE__*/require('./_curry1');
 
 var _curry2 = /*#__PURE__*/require('./_curry2');
@@ -376,7 +452,7 @@ function _curry3(fn) {
   };
 }
 module.exports = _curry3;
-},{"./_curry1":7,"./_curry2":8,"./_isPlaceholder":17}],10:[function(require,module,exports){
+},{"./_curry1":9,"./_curry2":10,"./_isPlaceholder":19}],12:[function(require,module,exports){
 var _arity = /*#__PURE__*/require('./_arity');
 
 var _isPlaceholder = /*#__PURE__*/require('./_isPlaceholder');
@@ -417,7 +493,7 @@ function _curryN(length, received, fn) {
   };
 }
 module.exports = _curryN;
-},{"./_arity":6,"./_isPlaceholder":17}],11:[function(require,module,exports){
+},{"./_arity":7,"./_isPlaceholder":19}],13:[function(require,module,exports){
 var _isArray = /*#__PURE__*/require('./_isArray');
 
 var _isTransformer = /*#__PURE__*/require('./_isTransformer');
@@ -462,12 +538,12 @@ function _dispatchable(methodNames, xf, fn) {
   };
 }
 module.exports = _dispatchable;
-},{"./_isArray":14,"./_isTransformer":19}],12:[function(require,module,exports){
+},{"./_isArray":16,"./_isTransformer":21}],14:[function(require,module,exports){
 function _has(prop, obj) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 module.exports = _has;
-},{}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 var _has = /*#__PURE__*/require('./_has');
 
 var toString = Object.prototype.toString;
@@ -480,7 +556,7 @@ var _isArguments = function () {
 };
 
 module.exports = _isArguments;
-},{"./_has":12}],14:[function(require,module,exports){
+},{"./_has":14}],16:[function(require,module,exports){
 /**
  * Tests whether or not an object is an array.
  *
@@ -496,7 +572,7 @@ module.exports = _isArguments;
 module.exports = Array.isArray || function _isArray(val) {
   return val != null && val.length >= 0 && Object.prototype.toString.call(val) === '[object Array]';
 };
-},{}],15:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 var _curry1 = /*#__PURE__*/require('./_curry1');
 
 var _isArray = /*#__PURE__*/require('./_isArray');
@@ -547,7 +623,7 @@ var _isArrayLike = /*#__PURE__*/_curry1(function isArrayLike(x) {
   return false;
 });
 module.exports = _isArrayLike;
-},{"./_curry1":7,"./_isArray":14,"./_isString":18}],16:[function(require,module,exports){
+},{"./_curry1":9,"./_isArray":16,"./_isString":20}],18:[function(require,module,exports){
 /**
  * Determine if the passed argument is an integer.
  *
@@ -559,22 +635,22 @@ module.exports = _isArrayLike;
 module.exports = Number.isInteger || function _isInteger(n) {
   return n << 0 === n;
 };
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 function _isPlaceholder(a) {
        return a != null && typeof a === 'object' && a['@@functional/placeholder'] === true;
 }
 module.exports = _isPlaceholder;
-},{}],18:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 function _isString(x) {
   return Object.prototype.toString.call(x) === '[object String]';
 }
 module.exports = _isString;
-},{}],19:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 function _isTransformer(obj) {
   return typeof obj['@@transducer/step'] === 'function';
 }
 module.exports = _isTransformer;
-},{}],20:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 function _map(fn, functor) {
   var idx = 0;
   var len = functor.length;
@@ -586,7 +662,7 @@ function _map(fn, functor) {
   return result;
 }
 module.exports = _map;
-},{}],21:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 var _isArrayLike = /*#__PURE__*/require('./_isArrayLike');
 
 var _xwrap = /*#__PURE__*/require('./_xwrap');
@@ -649,7 +725,7 @@ function _reduce(fn, acc, list) {
   throw new TypeError('reduce: list must be array or iterable');
 }
 module.exports = _reduce;
-},{"../bind":4,"./_isArrayLike":15,"./_xwrap":24}],22:[function(require,module,exports){
+},{"../bind":5,"./_isArrayLike":17,"./_xwrap":26}],24:[function(require,module,exports){
 module.exports = {
   init: function () {
     return this.xf['@@transducer/init']();
@@ -658,7 +734,7 @@ module.exports = {
     return this.xf['@@transducer/result'](result);
   }
 };
-},{}],23:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 var _curry2 = /*#__PURE__*/require('./_curry2');
 
 var _xfBase = /*#__PURE__*/require('./_xfBase');
@@ -682,7 +758,7 @@ var _xmap = /*#__PURE__*/_curry2(function _xmap(f, xf) {
   return new XMap(f, xf);
 });
 module.exports = _xmap;
-},{"./_curry2":8,"./_xfBase":22}],24:[function(require,module,exports){
+},{"./_curry2":10,"./_xfBase":24}],26:[function(require,module,exports){
 var XWrap = /*#__PURE__*/function () {
   function XWrap(fn) {
     this.f = fn;
@@ -704,7 +780,7 @@ function _xwrap(fn) {
   return new XWrap(fn);
 }
 module.exports = _xwrap;
-},{}],25:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 var _curry1 = /*#__PURE__*/require('./internal/_curry1');
 
 /**
@@ -730,7 +806,7 @@ var isNil = /*#__PURE__*/_curry1(function isNil(x) {
   return x == null;
 });
 module.exports = isNil;
-},{"./internal/_curry1":7}],26:[function(require,module,exports){
+},{"./internal/_curry1":9}],28:[function(require,module,exports){
 var _curry1 = /*#__PURE__*/require('./internal/_curry1');
 
 var _has = /*#__PURE__*/require('./internal/_has');
@@ -806,7 +882,7 @@ var _keys = typeof Object.keys === 'function' && !hasArgsEnumBug ? function keys
 };
 var keys = /*#__PURE__*/_curry1(_keys);
 module.exports = keys;
-},{"./internal/_curry1":7,"./internal/_has":12,"./internal/_isArguments":13}],27:[function(require,module,exports){
+},{"./internal/_curry1":9,"./internal/_has":14,"./internal/_isArguments":15}],29:[function(require,module,exports){
 var _curry2 = /*#__PURE__*/require('./internal/_curry2');
 
 var map = /*#__PURE__*/require('./map');
@@ -846,7 +922,42 @@ var lens = /*#__PURE__*/_curry2(function lens(getter, setter) {
   };
 });
 module.exports = lens;
-},{"./internal/_curry2":8,"./map":30}],28:[function(require,module,exports){
+},{"./internal/_curry2":10,"./map":33}],30:[function(require,module,exports){
+var _curry1 = /*#__PURE__*/require('./internal/_curry1');
+
+var lens = /*#__PURE__*/require('./lens');
+
+var nth = /*#__PURE__*/require('./nth');
+
+var update = /*#__PURE__*/require('./update');
+
+/**
+ * Returns a lens whose focus is the specified index.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.14.0
+ * @category Object
+ * @typedefn Lens s a = Functor f => (a -> f a) -> s -> f s
+ * @sig Number -> Lens s a
+ * @param {Number} n
+ * @return {Lens}
+ * @see R.view, R.set, R.over
+ * @example
+ *
+ *      var headLens = R.lensIndex(0);
+ *
+ *      R.view(headLens, ['a', 'b', 'c']);            //=> 'a'
+ *      R.set(headLens, 'x', ['a', 'b', 'c']);        //=> ['x', 'b', 'c']
+ *      R.over(headLens, R.toUpper, ['a', 'b', 'c']); //=> ['A', 'b', 'c']
+ */
+
+
+var lensIndex = /*#__PURE__*/_curry1(function lensIndex(n) {
+  return lens(nth(n), update(n));
+});
+module.exports = lensIndex;
+},{"./internal/_curry1":9,"./lens":29,"./nth":34,"./update":39}],31:[function(require,module,exports){
 var _curry1 = /*#__PURE__*/require('./internal/_curry1');
 
 var assocPath = /*#__PURE__*/require('./assocPath');
@@ -885,7 +996,7 @@ var lensPath = /*#__PURE__*/_curry1(function lensPath(p) {
   return lens(path(p), assocPath(p));
 });
 module.exports = lensPath;
-},{"./assocPath":3,"./internal/_curry1":7,"./lens":27,"./path":32}],29:[function(require,module,exports){
+},{"./assocPath":4,"./internal/_curry1":9,"./lens":29,"./path":36}],32:[function(require,module,exports){
 var _curry1 = /*#__PURE__*/require('./internal/_curry1');
 
 var assoc = /*#__PURE__*/require('./assoc');
@@ -920,7 +1031,7 @@ var lensProp = /*#__PURE__*/_curry1(function lensProp(k) {
   return lens(prop(k), assoc(k));
 });
 module.exports = lensProp;
-},{"./assoc":2,"./internal/_curry1":7,"./lens":27,"./prop":33}],30:[function(require,module,exports){
+},{"./assoc":3,"./internal/_curry1":9,"./lens":29,"./prop":37}],33:[function(require,module,exports){
 var _curry2 = /*#__PURE__*/require('./internal/_curry2');
 
 var _dispatchable = /*#__PURE__*/require('./internal/_dispatchable');
@@ -988,7 +1099,45 @@ var map = /*#__PURE__*/_curry2( /*#__PURE__*/_dispatchable(['fantasy-land/map', 
   }
 }));
 module.exports = map;
-},{"./curryN":5,"./internal/_curry2":8,"./internal/_dispatchable":11,"./internal/_map":20,"./internal/_reduce":21,"./internal/_xmap":23,"./keys":26}],31:[function(require,module,exports){
+},{"./curryN":6,"./internal/_curry2":10,"./internal/_dispatchable":13,"./internal/_map":22,"./internal/_reduce":23,"./internal/_xmap":25,"./keys":28}],34:[function(require,module,exports){
+var _curry2 = /*#__PURE__*/require('./internal/_curry2');
+
+var _isString = /*#__PURE__*/require('./internal/_isString');
+
+/**
+ * Returns the nth element of the given list or string. If n is negative the
+ * element at index length + n is returned.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.1.0
+ * @category List
+ * @sig Number -> [a] -> a | Undefined
+ * @sig Number -> String -> String
+ * @param {Number} offset
+ * @param {*} list
+ * @return {*}
+ * @example
+ *
+ *      var list = ['foo', 'bar', 'baz', 'quux'];
+ *      R.nth(1, list); //=> 'bar'
+ *      R.nth(-1, list); //=> 'quux'
+ *      R.nth(-99, list); //=> undefined
+ *
+ *      R.nth(2, 'abc'); //=> 'c'
+ *      R.nth(3, 'abc'); //=> ''
+ * @symb R.nth(-1, [a, b, c]) = c
+ * @symb R.nth(0, [a, b, c]) = a
+ * @symb R.nth(1, [a, b, c]) = b
+ */
+
+
+var nth = /*#__PURE__*/_curry2(function nth(offset, list) {
+  var idx = offset < 0 ? list.length + offset : offset;
+  return _isString(list) ? list.charAt(idx) : list[idx];
+});
+module.exports = nth;
+},{"./internal/_curry2":10,"./internal/_isString":20}],35:[function(require,module,exports){
 var _curry3 = /*#__PURE__*/require('./internal/_curry3');
 
 // `Identity` is a functor that holds a single value, where `map` simply
@@ -1032,7 +1181,7 @@ var over = /*#__PURE__*/_curry3(function over(lens, f, x) {
   })(x).value;
 });
 module.exports = over;
-},{"./internal/_curry3":9}],32:[function(require,module,exports){
+},{"./internal/_curry3":11}],36:[function(require,module,exports){
 var _curry2 = /*#__PURE__*/require('./internal/_curry2');
 
 /**
@@ -1068,7 +1217,7 @@ var path = /*#__PURE__*/_curry2(function path(paths, obj) {
   return val;
 });
 module.exports = path;
-},{"./internal/_curry2":8}],33:[function(require,module,exports){
+},{"./internal/_curry2":10}],37:[function(require,module,exports){
 var _curry2 = /*#__PURE__*/require('./internal/_curry2');
 
 var path = /*#__PURE__*/require('./path');
@@ -1096,7 +1245,7 @@ var prop = /*#__PURE__*/_curry2(function prop(p, obj) {
   return path([p], obj);
 });
 module.exports = prop;
-},{"./internal/_curry2":8,"./path":32}],34:[function(require,module,exports){
+},{"./internal/_curry2":10,"./path":36}],38:[function(require,module,exports){
 var _curry3 = /*#__PURE__*/require('./internal/_curry3');
 
 var always = /*#__PURE__*/require('./always');
@@ -1131,7 +1280,42 @@ var set = /*#__PURE__*/_curry3(function set(lens, v, x) {
   return over(lens, always(v), x);
 });
 module.exports = set;
-},{"./always":1,"./internal/_curry3":9,"./over":31}],35:[function(require,module,exports){
+},{"./always":2,"./internal/_curry3":11,"./over":35}],39:[function(require,module,exports){
+var _curry3 = /*#__PURE__*/require('./internal/_curry3');
+
+var adjust = /*#__PURE__*/require('./adjust');
+
+var always = /*#__PURE__*/require('./always');
+
+/**
+ * Returns a new copy of the array with the element at the provided index
+ * replaced with the given value.
+ *
+ * @func
+ * @memberOf R
+ * @since v0.14.0
+ * @category List
+ * @sig Number -> a -> [a] -> [a]
+ * @param {Number} idx The index to update.
+ * @param {*} x The value to exist at the given index of the returned array.
+ * @param {Array|Arguments} list The source array-like object to be updated.
+ * @return {Array} A copy of `list` with the value at index `idx` replaced with `x`.
+ * @see R.adjust
+ * @example
+ *
+ *      R.update(1, 11, [0, 1, 2]);     //=> [0, 11, 2]
+ *      R.update(1)(11)([0, 1, 2]);     //=> [0, 11, 2]
+ * @symb R.update(-1, a, [b, c]) = [b, a]
+ * @symb R.update(0, a, [b, c]) = [a, c]
+ * @symb R.update(1, a, [b, c]) = [b, a]
+ */
+
+
+var update = /*#__PURE__*/_curry3(function update(idx, x, list) {
+  return adjust(always(x), idx, list);
+});
+module.exports = update;
+},{"./adjust":1,"./always":2,"./internal/_curry3":11}],40:[function(require,module,exports){
 var _curry2 = /*#__PURE__*/require('./internal/_curry2');
 
 // `Const` is a functor that effectively ignores the function given to `map`.
@@ -1170,13 +1354,13 @@ var view = /*#__PURE__*/_curry2(function view(lens, x) {
   return lens(Const)(x).value;
 });
 module.exports = view;
-},{"./internal/_curry2":8}],36:[function(require,module,exports){
+},{"./internal/_curry2":10}],41:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createReducer = exports.addPath = void 0;
+exports.createReducer = exports.getLens = exports.addPath = void 0;
 
 var _set = _interopRequireDefault(require("ramda/src/set"));
 
@@ -1185,6 +1369,8 @@ var _view = _interopRequireDefault(require("ramda/src/view"));
 var _lensPath = _interopRequireDefault(require("ramda/src/lensPath"));
 
 var _lensProp = _interopRequireDefault(require("ramda/src/lensProp"));
+
+var _lensIndex = _interopRequireDefault(require("ramda/src/lensIndex"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -1195,16 +1381,13 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 function createPathspace() {
   var PREFIX_JOINER = '.';
   var PREFIX_SEPERATOR = '_';
+  var pathStringSymbol = Symbol('@@Pathspace->addPath->path[pathString]');
+  var pathLensSymbol = Symbol('@@Pathspace->addPath->path[pathLens]');
 
   var _namespaces = new Map();
 
   function getPathPrefix(path) {
     return Array.isArray(path) ? path.join(PREFIX_JOINER) : path;
-  }
-
-  function createLens(path) {
-    if (Array.isArray(path)) return (0, _lensPath.default)(path);
-    return (0, _lensProp.default)(path);
   }
 
   function reducerWrapper(lens, reducer) {
@@ -1215,10 +1398,9 @@ function createPathspace() {
     };
   }
 
-  function createActionContainer(path) {
+  function createActionContainer(lens) {
     var _actions = new Map();
 
-    var lens = createLens(path);
     return {
       set: function set(actionName, reducer) {
         if (_actions.has(actionName)) throw new Error("The action \"".concat(actionName, "\" already exists for this path"));
@@ -1247,12 +1429,6 @@ function createPathspace() {
     return isValid;
   }
 
-  function validatePath(path) {
-    if (!path) throw new Error('No path was provided to "addPath" function, which is required');
-    if (typeof path !== 'string' && !Array.isArray(path)) throw new Error('The path provided to "addPath" function must be a string or an array');
-    if (Array.isArray(path) && !checkPathArray(path)) throw new Error('When using an array to "addPath", only strings and numbers are permitted');
-  }
-
   function getNamespace(path) {
     return _namespaces.get(getPathPrefix(path));
   }
@@ -1272,23 +1448,6 @@ function createPathspace() {
   function getNamespaceName(actionType) {
     var split = actionType.split(PREFIX_SEPERATOR)[0].split(PREFIX_JOINER);
     return split.length > 1 ? split : split[0];
-  }
-
-  function ensurePath(path) {
-    if (!Array.isArray(path)) {
-      var split = path.split(PREFIX_JOINER);
-      if (split.length > 1) return split;
-      return split[0];
-    }
-
-    return path;
-  }
-
-  function setNamespace(path) {
-    validatePath(path);
-    var prefix = getPathPrefix(path);
-    if (_namespaces.has(prefix)) throw new Error("The path \"".concat(path, "\" already exists"));
-    return _namespaces.set(prefix, createActionContainer(ensurePath(path)));
   }
 
   function validateAddActionArgs(actionType, reducer, meta) {
@@ -1322,21 +1481,64 @@ function createPathspace() {
     return "".concat(path, ".").concat(subPath);
   }
 
-  function addPath(p) {
-    setNamespace(p);
-    return function path() {
+  function validatePath(path, parentPath) {
+    if (!path) throw new Error('No path was provided to "addPath" function, which is required');
+    if (typeof path !== 'string' && !Array.isArray(path)) throw new Error('The path provided to "addPath" function must be a string or array');
+    if (parentPath && !(parentPath[pathStringSymbol] && parentPath[pathLensSymbol])) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "addPath"');
+    if (Array.isArray(path) && !checkPathArray(path)) throw new Error('When using an array to "addPath", only strings and numbers are permitted');
+  }
+
+  function ensurePath(path) {
+    if (!Array.isArray(path)) {
+      var split = path.split(PREFIX_JOINER);
+      if (split.length > 1) return split;
+      return split[0];
+    }
+
+    return path;
+  }
+
+  function createLens(path, parentPath) {
+    var lens;
+    if (Array.isArray(path)) lens = (0, _lensPath.default)(path);
+    if (typeof path === 'number') lens = (0, _lensIndex.default)(path);
+    if (typeof path === 'string') lens = (0, _lensProp.default)(path);
+    return parentPath ? function (x) {
+      return parentPath[pathLensSymbol](lens(x));
+    } : lens;
+  }
+
+  function setNamespace(path, parentPath) {
+    validatePath(path, parentPath);
+    var lens = createLens(ensurePath(path), parentPath);
+    var pathString = parentPath ? getSubPath(parentPath[pathStringSymbol], path) : path;
+    var prefix = getPathPrefix(pathString);
+    if (_namespaces.has(prefix)) throw new Error("The path \"".concat(pathString, "\" already exists"));
+
+    _namespaces.set(prefix, createActionContainer(lens));
+
+    return {
+      lens: lens,
+      prefix: prefix
+    };
+  }
+
+  function addPath(p, parentPath) {
+    var _setNamespace = setNamespace(p, parentPath),
+        lens = _setNamespace.lens,
+        prefix = _setNamespace.prefix;
+
+    function path() {
       var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
           actionType = _ref.actionType,
           _ref$reducer = _ref.reducer,
           reducer = _ref$reducer === void 0 ? defaultReducer : _ref$reducer,
           _ref$meta = _ref.meta,
-          meta = _ref$meta === void 0 ? {} : _ref$meta,
-          subPath = _ref.subPath;
+          meta = _ref$meta === void 0 ? {} : _ref$meta;
 
-      if (subPath) return addPath(getSubPath(p, subPath));
       validateAddActionArgs(actionType, reducer, meta);
-      var type = getActionName(p, actionType);
-      getNamespace(p).set(type, reducer);
+      var type = getActionName(prefix, actionType);
+      getNamespace(prefix).set(type, reducer);
       return function createActionCreator() {
         var payloadHandler = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultPayloadHandler;
         if (typeof payloadHandler !== 'function') throw new Error('Payload handler supplied to "createActionCreator" must be a function');
@@ -1348,7 +1550,15 @@ function createPathspace() {
           };
         };
       };
-    };
+    }
+
+    path[pathStringSymbol] = prefix;
+    path[pathLensSymbol] = lens;
+    return path;
+  }
+
+  function getLens(path) {
+    return path[pathLensSymbol];
   }
 
   function createReducer() {
@@ -1370,15 +1580,18 @@ function createPathspace() {
 
   return {
     addPath: addPath,
+    getLens: getLens,
     createReducer: createReducer
   };
 }
 
 var _createPathspace = createPathspace(),
     addPath = _createPathspace.addPath,
+    getLens = _createPathspace.getLens,
     createReducer = _createPathspace.createReducer;
 
 exports.createReducer = createReducer;
+exports.getLens = getLens;
 exports.addPath = addPath;
-},{"ramda/src/lensPath":28,"ramda/src/lensProp":29,"ramda/src/set":34,"ramda/src/view":35}]},{},[36])(36)
+},{"ramda/src/lensIndex":30,"ramda/src/lensPath":31,"ramda/src/lensProp":32,"ramda/src/set":38,"ramda/src/view":40}]},{},[41])(41)
 });

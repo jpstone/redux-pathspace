@@ -2,10 +2,13 @@ import set from 'ramda/src/set';
 import view from 'ramda/src/view';
 import lensPath from 'ramda/src/lensPath';
 import lensProp from 'ramda/src/lensProp';
+import lensIndex from 'ramda/src/lensIndex';
 
 function createPathspace() {
   const PREFIX_JOINER = '.';
   const PREFIX_SEPERATOR = '_';
+  const pathStringSymbol = Symbol('@@Pathspace->addPath->path[pathString]');
+  const pathLensSymbol = Symbol('@@Pathspace->addPath->path[pathLens]');
 
   const _namespaces = new Map();
 
@@ -13,11 +16,6 @@ function createPathspace() {
     return Array.isArray(path)
       ? path.join(PREFIX_JOINER)
       : path;
-  }
-
-  function createLens(path) {
-    if (Array.isArray(path)) return lensPath(path);
-    return lensProp(path);
   }
 
   function reducerWrapper(lens, reducer) {
@@ -28,9 +26,8 @@ function createPathspace() {
     };
   }
 
-  function createActionContainer(path) {
+  function createActionContainer(lens) {
     const _actions = new Map();
-    const lens = createLens(path);
     return {
       set(actionName, reducer) {
         if (_actions.has(actionName)) throw new Error(`The action "${actionName}" already exists for this path`);
@@ -57,12 +54,6 @@ function createPathspace() {
     return isValid;
   }
 
-  function validatePath(path) {
-    if (!path) throw new Error('No path was provided to "addPath" function, which is required');
-    if (typeof path !== 'string' && !Array.isArray(path)) throw new Error('The path provided to "addPath" function must be a string or an array');
-    if (Array.isArray(path) && !checkPathArray(path)) throw new Error('When using an array to "addPath", only strings and numbers are permitted');
-  }
-
   function getNamespace(path) {
     return _namespaces.get(getPathPrefix(path));
   }
@@ -84,22 +75,6 @@ function createPathspace() {
     return split.length > 1
       ? split
       : split[0];
-  }
-
-  function ensurePath(path) {
-    if (!Array.isArray(path)) {
-      const split = path.split(PREFIX_JOINER);
-      if (split.length > 1) return split;
-      return split[0];
-    }
-    return path;
-  }
-
-  function setNamespace(path) {
-    validatePath(path);
-    const prefix = getPathPrefix(path);
-    if (_namespaces.has(prefix)) throw new Error(`The path "${path}" already exists`);
-    return _namespaces.set(prefix, createActionContainer(ensurePath(path)));
   }
 
   function validateAddActionArgs(actionType, reducer, meta) {
@@ -128,13 +103,48 @@ function createPathspace() {
     return `${path}.${subPath}`;
   }
 
-  function addPath(p) {
-    setNamespace(p);
-    return function path({ actionType, reducer = defaultReducer, meta = {}, subPath } = {}) {
-      if (subPath) return addPath(getSubPath(p, subPath));
+  function validatePath(path, parentPath) {
+    if (!path) throw new Error('No path was provided to "addPath" function, which is required');
+    if (typeof path !== 'string' && !Array.isArray(path)) throw new Error('The path provided to "addPath" function must be a string or array');
+    if (parentPath && !(parentPath[pathStringSymbol] && parentPath[pathLensSymbol])) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "addPath"');
+    if (Array.isArray(path) && !checkPathArray(path)) throw new Error('When using an array to "addPath", only strings and numbers are permitted');
+  }
+
+  function ensurePath(path) {
+    if (!Array.isArray(path)) {
+      const split = path.split(PREFIX_JOINER);
+      if (split.length > 1) return split;
+      return split[0];
+    }
+    return path;
+  }
+
+  function createLens(path, parentPath) {
+    let lens;
+    if (Array.isArray(path)) lens = lensPath(path);
+    if (typeof path === 'number') lens = lensIndex(path);
+    if (typeof path === 'string') lens = lensProp(path);
+    return parentPath
+      ? x => parentPath[pathLensSymbol](lens(x))
+      : lens;
+  }
+
+  function setNamespace(path, parentPath) {
+    validatePath(path, parentPath);
+    const lens = createLens(ensurePath(path), parentPath);
+    const pathString = parentPath ? getSubPath(parentPath[pathStringSymbol], path) : path;
+    const prefix = getPathPrefix(pathString);
+    if (_namespaces.has(prefix)) throw new Error(`The path "${pathString}" already exists`);
+    _namespaces.set(prefix, createActionContainer(lens));
+    return { lens, prefix };
+  }
+
+  function addPath(p, parentPath) {
+    const { lens, prefix } = setNamespace(p, parentPath);
+    function path({ actionType, reducer = defaultReducer, meta = {} } = {}) {
       validateAddActionArgs(actionType, reducer, meta);
-      const type = getActionName(p, actionType);
-      getNamespace(p).set(type, reducer);
+      const type = getActionName(prefix, actionType);
+      getNamespace(prefix).set(type, reducer);
       return function createActionCreator(payloadHandler = defaultPayloadHandler) {
         if (typeof payloadHandler !== 'function') throw new Error('Payload handler supplied to "createActionCreator" must be a function');
         return (...args) => ({
@@ -143,7 +153,14 @@ function createPathspace() {
           meta,
         });
       };
-    };
+    }
+    path[pathStringSymbol] = prefix;
+    path[pathLensSymbol] = lens;
+    return path;
+  }
+
+  function getLens(path) {
+    return path[pathLensSymbol];
   }
 
   function createReducer(initialState = {}) {
@@ -162,10 +179,11 @@ function createPathspace() {
 
   return {
     addPath,
+    getLens,
     createReducer,
   };
 }
 
-const { addPath, createReducer } = createPathspace();
+const { addPath, getLens, createReducer } = createPathspace();
 
-export { addPath, createReducer };
+export { addPath, getLens, createReducer };

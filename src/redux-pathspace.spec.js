@@ -1,3 +1,5 @@
+/* eslint global-require: 0 */
+
 const tape = require('tape');
 
 function isFunction(f) {
@@ -12,7 +14,7 @@ tape('createPathspace', (t) => {
 });
 
 tape('createPathspace -> addPath', (t) => {
-  const { addPath } = require('../dist/redux-pathspace');
+  const { addPath, createReducer } = require('../dist/redux-pathspace');
   t.doesNotThrow(() => addPath('foo'), 'accepts: string');
   t.doesNotThrow(() => addPath('foo.bar.baz'), 'accepts: stringed path representation');
   t.doesNotThrow(() => addPath(['foo', 2]), 'accepts: array of strings or numbers');
@@ -21,6 +23,23 @@ tape('createPathspace -> addPath', (t) => {
   t.throws(() => addPath(['foo', 'bar', 'baz', {}]), Error, 'throws: when passed an array that does not consist of only strings or numbers');
   t.throws(() => addPath('foo'), Error, 'throws: when passed an existing path');
   t.throws(() => addPath(['foo.bar.baz', 1]), Error, 'throws: when using dot notation for path index in array');
+
+  const state = {
+    xx: {
+      yy: 'z',
+    },
+  };
+
+  function yReducer(slice) {
+    if (slice !== 'z') throw new Error();
+  }
+
+  const rootReducer = createReducer(state);
+  const xPath = addPath('xx');
+  const yPath = addPath('yy', xPath);
+  const yPathActionCreator = yPath({ actionType: 'FOO', reducer: yReducer })();
+
+  t.doesNotThrow(() => rootReducer(state, yPathActionCreator()), 'should properly compose lenses');
   t.end();
 });
 
@@ -113,5 +132,16 @@ tape('createPathspace -> createReducer -> reducer', (t) => {
   const newState = rootReducer(initialState, actionB());
 
   t.equal(newState.foo.bar.baz[0].id, 'foo', 'root reducer properly returns modified state');
+  t.end();
+});
+
+tape('createPathspace -> getLens', (t) => {
+  const view = require('ramda/src/view');
+  const { addPath, getLens } = require('../dist/redux-pathspace');
+  const state = { r: 'foo' };
+  const rPath = addPath('r');
+  const rLens = getLens(rPath);
+
+  t.equal(view(rLens, state), 'foo', 'getLens should properly get lens');
   t.end();
 });
