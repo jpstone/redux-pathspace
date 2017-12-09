@@ -1,11 +1,12 @@
 {
   "name": "redux-pathspace",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "description": "",
   "main": "dist/redux-pathspace.js",
   "scripts": {
     "clean": "if [ -d ./dist ]; then rm -rf ./dist ; fi && if [ -d ./tmp ]; then rm -rf ./tmp ; fi && mkdir dist",
     "test": "npm run eslint && npm run build && tape src/redux-pathspace.spec.js",
+    "testbrk": "npm run eslint && npm run build && node --inspect-brk ./node_modules/.bin/tape src/redux-pathspace.spec.js",
     "eslint": "eslint src/redux-pathspace.js",
     "build": "babel src/redux-pathspace.js -d ./tmp && npm run bundle",
     "bundle": "browserify ./tmp/redux-pathspace.js --standalone redux-pathspace > dist/redux-pathspace.js && rm -rf tmp",

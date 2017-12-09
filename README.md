@@ -132,24 +132,24 @@ export { fooPath, barPath };
 import { addPath, createReducer } from 'redux-pathspace';
 ```
 
-### const path = addPath(path);
+### const path = addPath(path, [parentPath]);
 
 Creates a new function from which you can add action type/reducer pairs, a meta object (to be attached to the action), or create a sub-path
 
-- `path` (string|array|number) - Required. Create a new namespaced path with the given argument. If it's a string, it can be dot notation such as `foo.bar.baz`; if it's an Array it can consist of strings and numbers *without* dot notated strings `['foo', 'bar', 0]`; if it's a number (whether standalone or in an array) then it specifies an array index within your given path.
+- `path` (string|array|number|function) - Required. Create a new namespaced path with the given argument. If it's a string, it can be dot notation such as `foo.bar.baz`; if it's an Array it can consist of strings and numbers *without* dot notated strings `['foo', 'bar', 0]`; if it's a number (whether standalone or in an array) then it specifies an array index within your given path.
+- `parentPath` (function) Optional. If supplied, this *must* be a valid `path` function returned from a previous `addPath` call, which will act as the parent path (behind the scenes, this accesses the previous Ramda lens and composes those lenses together to create sub-paths)
 
 Returns - (function) - A new `path` container.
 
-### const createActionCreator = path({ [actionType], [reducer], [meta], [subPath] });
+### const createActionCreator = path({ actionType, [reducer], [meta] });
 
 Creates a new function used to create new action creators.
 
-- `actionType` (string) - Required if not setting a sub-path.
-- `reducer` (function) - Optional. Reducer to be called when `actionType` is dispatched. If not supplied it uses a default reducer with the signature: `defaultReducer = (path, payload) -> payload`. All supplied reducers get passed the path specified when calling `addPath` as the first argument, the `payload` returned from your `actionCreator` as the second argument, and the full state supplied by `redux`. For example: `myReducer(path, payload, fullState) => payload`.
+- `actionType` (string) - Required. The name of your action that will get prefixed with the parent path to avoid collisions.
+- `reducer` (function) - Optional. Reducer to be called when `actionType` is dispatched. If not supplied it uses a default reducer with the signature: `defaultReducer = (path, payload) -> payload`. All supplied reducers get passed the value of the path specified when calling `addPath` as the first argument, the `payload` returned from your `actionCreator` as the second argument, and the full state supplied by `redux`. For example: `myReducer(path, payload, fullState) => payload`.
 - `meta` (object) - Optional. Object to set on the `action.meta` property. Defaults to `{}`.
-- `subPath` (string|array|number) - Optional. If provided, all other arguments are ignored and a new `path` is returned.
 
-Returns - (function) - If a `subPath` is provided, a new `path` container. Otherwise, a new `createActionCreator`.
+Returns - (function) - A new `createActionCreator`.
 
 ### const actionCreator = createActionCreator([payloadHandler]);
 
@@ -170,6 +170,14 @@ Returns - (object) - A flux standard action (FSA).
 - `initialState` (string|array|number|object) - Required. Used to store the supplied initial state which is returned whenever the state passed to a reducer is `undefined`.
 
 Returns - (function) - A "root" reducer which should get passed to `redux`'s `createStore`.
+
+### const lens = getLens(path);
+
+Convenience function to retrieve the underlying Ramda lens being used by `redux-pathspacer` for the given path should you need it for your own purposes.
+
+- `path` Required. Must be a valid `path` function returned from an `addPath` call.
+
+Returns - (function) - A Ramda lens.
 
 ## Install
 
