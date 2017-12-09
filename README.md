@@ -120,7 +120,7 @@ As a side note, sub-paths can be created from the paths created by `addPath`:
 import { addPath } from 'redux-reducer';
 
 const fooPath = addPath('foo');
-const barPath = fooPath({ subPath: 'bar' });
+const barPath = addPath('bar', fooPath);
 
 export { fooPath, barPath };
 
