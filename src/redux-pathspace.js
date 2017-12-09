@@ -1,5 +1,5 @@
 import set from 'ramda/src/set';
-import view from 'ramda/src/view';
+import _view from 'ramda/src/view';
 import lensPath from 'ramda/src/lensPath';
 import lensProp from 'ramda/src/lensProp';
 import lensIndex from 'ramda/src/lensIndex';
@@ -19,7 +19,7 @@ function createPathspace() {
   }
 
   function reducerWrapper(lens, reducer) {
-    const getter = view(lens);
+    const getter = _view(lens);
     const setter = set(lens);
     return function wrappedReducer(state, payload) {
       return setter(reducer(getter(state), payload, state), state);
@@ -159,6 +159,10 @@ function createPathspace() {
     return path;
   }
 
+  function view(path) {
+    return _view(path[pathLensSymbol]);
+  }
+
   function getLens(path) {
     return path[pathLensSymbol];
   }
@@ -178,12 +182,13 @@ function createPathspace() {
   }
 
   return {
+    view,
     addPath,
     getLens,
     createReducer,
   };
 }
 
-const { addPath, getLens, createReducer } = createPathspace();
+const { addPath, getLens, view, createReducer } = createPathspace();
 
-export { addPath, getLens, createReducer };
+export { addPath, getLens, view, createReducer };
