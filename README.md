@@ -175,7 +175,7 @@ Returns - (function) - A "root" reducer which should get passed to `redux`'s `cr
 
 Convenience function to retrieve the underlying Ramda lens being used by `redux-pathspacer` for the given path should you need it for your own purposes.
 
-- `path` Required. Must be a valid `path` function returned from an `addPath` call.
+- `path` - (function) - Required. Must be a valid `path` function returned from an `addPath` call.
 
 Returns - (function) - A Ramda lens.
 
