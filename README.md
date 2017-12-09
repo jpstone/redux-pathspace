@@ -129,7 +129,7 @@ export { fooPath, barPath };
 ## API
 
 ```js
-import { addPath, createReducer } from 'redux-pathspace';
+import { addPath, createReducer, getLens } from 'redux-pathspace';
 ```
 
 ### const path = addPath(path, [parentPath]);
