@@ -1482,14 +1482,14 @@ function createPathspace() {
   }
 
   function validatePath(path, parentPath) {
-    if (!path) throw new Error('No path was provided to "addPath" function, which is required');
-    if (typeof path !== 'string' && !Array.isArray(path)) throw new Error('The path provided to "addPath" function must be a string or array');
+    if (typeof path !== 'number' && !path) throw new Error('No path was provided to "addPath" function, which is required');
+    if (typeof path !== 'string' && !Array.isArray(path) && typeof path !== 'number') throw new Error('The path provided to "addPath" function must be a string or array');
     if (parentPath && !(parentPath[pathStringSymbol] && parentPath[pathLensSymbol])) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "addPath"');
     if (Array.isArray(path) && !checkPathArray(path)) throw new Error('When using an array to "addPath", only strings and numbers are permitted');
   }
 
   function ensurePath(path) {
-    if (!Array.isArray(path)) {
+    if (!Array.isArray(path) && typeof path !== 'number') {
       var split = path.split(PREFIX_JOINER);
       if (split.length > 1) return split;
       return split[0];

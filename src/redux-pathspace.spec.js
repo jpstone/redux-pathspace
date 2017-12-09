@@ -18,6 +18,7 @@ tape('createPathspace -> addPath', (t) => {
   t.doesNotThrow(() => addPath('foo'), 'accepts: string');
   t.doesNotThrow(() => addPath('foo.bar.baz'), 'accepts: stringed path representation');
   t.doesNotThrow(() => addPath(['foo', 2]), 'accepts: array of strings or numbers');
+  t.doesNotThrow(() => addPath(0), 'accepts: number');
   t.equal(...isFunction(addPath('baz')), 'returns: function <addAction>');
   t.throws(() => addPath({}), Error, 'throws: when passed an object');
   t.throws(() => addPath(['foo', 'bar', 'baz', {}]), Error, 'throws: when passed an array that does not consist of only strings or numbers');
@@ -103,6 +104,9 @@ tape('createPathspace -> createReducer -> reducer', (t) => {
         zab: 'hello',
       },
     },
+    indexPath: {
+      arr: ['hi'],
+    },
   };
 
   function pathReducerA(slice, payload, state) {
@@ -119,14 +123,22 @@ tape('createPathspace -> createReducer -> reducer', (t) => {
     return newSlice;
   }
 
+  function pathReducerC(slice) {
+    if (slice !== 'hi') throw new Error();
+  }
+
   const rootReducer = createReducer(initialState);
   const createActionCreator = addPath('foo.bar')({ actionType: 'FOO', reducer: pathReducerA });
+  const indexPath = addPath('indexPath');
+  const hiPath = addPath(0, addPath('arr', indexPath));
+  const indexAction = hiPath({ actionType: 'FOO' })();
   const actionA = createActionCreator(() => 'foo');
   const actionAA = createActionCreator(() => 'bar');
   const actionB = addPath(['foo', 'bar', 'baz', 0])({ actionType: 'FOO', reducer: pathReducerB })();
 
   t.doesNotThrow(() => rootReducer(initialState, actionA()), 'reducer: passes slice as first argument and full state as last argument');
   t.doesNotThrow(() => rootReducer(initialState, actionB()), 'reducer: handles array-index paths');
+  t.doesNotThrow(() => rootReducer(initialState, indexAction()), 'properly handles index paths');
   t.throws(() => rootReducer(initialState, actionAA()), 'reducer: passes payload as second argument');
 
   const newState = rootReducer(initialState, actionB());
