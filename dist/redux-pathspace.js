@@ -1360,11 +1360,11 @@ module.exports = view;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createReducer = exports.view = exports.getLens = exports.addPath = void 0;
+exports.createReducer = exports.getView = exports.getLens = exports.addPath = void 0;
 
 var _set = _interopRequireDefault(require("ramda/src/set"));
 
-var _view2 = _interopRequireDefault(require("ramda/src/view"));
+var _view = _interopRequireDefault(require("ramda/src/view"));
 
 var _lensPath = _interopRequireDefault(require("ramda/src/lensPath"));
 
@@ -1391,7 +1391,7 @@ function createPathspace() {
   }
 
   function reducerWrapper(lens, reducer) {
-    var getter = (0, _view2.default)(lens);
+    var getter = (0, _view.default)(lens);
     var setter = (0, _set.default)(lens);
     return function wrappedReducer(state, payload) {
       return setter(reducer(getter(state), payload, state), state);
@@ -1557,8 +1557,8 @@ function createPathspace() {
     return path;
   }
 
-  function view(path) {
-    return (0, _view2.default)(path[pathLensSymbol]);
+  function getView(path) {
+    return (0, _view.default)(path[pathLensSymbol]);
   }
 
   function getLens(path) {
@@ -1583,9 +1583,9 @@ function createPathspace() {
   }
 
   return {
-    view: view,
     addPath: addPath,
     getLens: getLens,
+    getView: getView,
     createReducer: createReducer
   };
 }
@@ -1593,11 +1593,11 @@ function createPathspace() {
 var _createPathspace = createPathspace(),
     addPath = _createPathspace.addPath,
     getLens = _createPathspace.getLens,
-    view = _createPathspace.view,
+    getView = _createPathspace.getView,
     createReducer = _createPathspace.createReducer;
 
 exports.createReducer = createReducer;
-exports.view = view;
+exports.getView = getView;
 exports.getLens = getLens;
 exports.addPath = addPath;
 },{"ramda/src/lensIndex":30,"ramda/src/lensPath":31,"ramda/src/lensProp":32,"ramda/src/set":38,"ramda/src/view":40}]},{},[41])(41)

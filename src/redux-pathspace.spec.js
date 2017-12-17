@@ -158,13 +158,13 @@ tape('createPathspace -> getLens', (t) => {
   t.end();
 });
 
-tape('createPathspace -> view', (t) => {
-  const { addPath, view } = require('../dist/redux-pathspace');
+tape('createPathspace -> getView', (t) => {
+  const { addPath, getView } = require('../dist/redux-pathspace');
   const state = {
     m: 'foo',
   };
   const xPath = addPath('m');
-  const xView = view(xPath);
+  const xView = getView(xPath);
 
   t.equal(xView(state), 'foo', 'should properly view path');
   t.end();
