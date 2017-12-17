@@ -40,7 +40,7 @@ Under the hood, each `path` you pass to `addPath` creates a new [Ramda](https://
 
 ## Usage
 
-`redux-pathspace` exports 4 functions: `addPath`, `view`, `createReducer`, and `getLens`. For more information on `getLens`, see the API documentation below as it's not needed for most use cases.
+`redux-pathspace` exports 4 functions: `addPath`, `getView`, `createReducer`, and `getLens`. For more information on `getLens`, see the API documentation below as it's not needed for most use cases.
 
 First, `import` `createReducer`, pass it your initial state, and then pass the resulting function (your "root" reducer) to `redux`'s `createStore`:
 
@@ -131,7 +131,7 @@ export { fooPath, barPath };
 ## API
 
 ```js
-import { addPath, view, createReducer, getLens } from 'redux-pathspace';
+import { addPath, getView, createReducer, getLens } from 'redux-pathspace';
 ```
 
 ### const path = addPath(path, [parentPath]);
@@ -173,7 +173,7 @@ Returns - (object) - A flux standard action (FSA).
 
 Returns - (function) - A "root" reducer which should get passed to `redux`'s `createStore`.
 
-### const pathView = view(path);
+### const pathView = getView(path);
 
 Helper function to make `mapStateToProps` and `mapDispatchToProps` a breeze.
 
@@ -185,10 +185,10 @@ Returns - (function) - A function that takes a state object and returns the valu
 Example:
 
 ```js
-import { addPath, view } from 'redux-pathspace';
+import { addPath, getView } from 'redux-pathspace';
 
 const fooPath = addPath('foo');
-const fooView = view(fooPath);
+const fooView = getView(fooPath);
 
 
 // somewhere later in a mapStateToProps
