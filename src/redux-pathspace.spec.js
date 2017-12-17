@@ -38,7 +38,7 @@ tape('createPathspace -> addPath', (t) => {
   const rootReducer = createReducer(state);
   const xPath = addPath('xx');
   const yPath = addPath('yy', xPath);
-  const yPathActionCreator = yPath({ actionType: 'FOO', reducer: yReducer })();
+  const yPathActionCreator = yPath('FOO', yReducer)();
 
   t.doesNotThrow(() => rootReducer(state, yPathActionCreator()), 'should properly compose lenses');
   t.end();
@@ -48,19 +48,19 @@ tape('createPathspace -> addPath -> path', (t) => {
   const { addPath } = require('../dist/redux-pathspace');
   const addAction = addPath('x');
 
-  t.doesNotThrow(() => addAction({ actionType: 'foo' }), 'accepts: object { actionType, [reducer], [meta] }');
-  t.doesNotThrow(() => addAction({ actionType: 'bar', reducer: () => {} }), 'accepts: object with optional reducer');
-  t.doesNotThrow(() => addAction({ actionType: 'baz', reducer: () => {}, meta: {} }), 'accepts: object with optional meta property');
-  t.equal(...isFunction(addAction({ actionType: 'x' })), 'returns: function <createActionCreator>');
-  t.throws(() => addAction({ actionType: 'foo' }), Error, 'throws: when supplied an existing actionType for the given namespace');
-  t.throws(() => addAction({ actionType: 'alpha', reducer: 0 }), Error, 'throws: when optional reducer property is not a function');
-  t.throws(() => addAction({ actionType: 'omega', meta: [] }), Error, 'throws: when optional meta property is not a plain object');
+  t.doesNotThrow(() => addAction('foo'), 'accepts: actionType[, reducer][, meta]');
+  t.doesNotThrow(() => addAction('bar', () => {}), 'accepts: object with optional reducer');
+  t.doesNotThrow(() => addAction('baz', () => {}, {}), 'accepts: object with optional meta property');
+  t.equal(...isFunction(addAction('x')), 'returns: function <createActionCreator>');
+  t.throws(() => addAction('foo'), Error, 'throws: when supplied an existing actionType for the given namespace');
+  t.throws(() => addAction('alpha', 0), Error, 'throws: when optional reducer property is not a function');
+  t.throws(() => addAction('omega', () => {}, []), Error, 'throws: when optional meta property is not a plain object');
   t.end();
 });
 
 tape('createPathspace -> addPath -> path -> createActionCreator', (t) => {
   const { addPath } = require('../dist/redux-pathspace');
-  const createActionCreator = addPath('y')({ actionType: 'foo' });
+  const createActionCreator = addPath('y')('foo');
 
   t.doesNotThrow(() => createActionCreator(), 'accepts: optional [payloadHandler]');
   t.equal(...isFunction(createActionCreator(() => {})), 'returns: function <actionCreator>');
@@ -70,7 +70,7 @@ tape('createPathspace -> addPath -> path -> createActionCreator', (t) => {
 
 tape('createPathspace -> addPath -> path -> createActionCreator -> actionCreator', (t) => {
   const { addPath } = require('../dist/redux-pathspace');
-  const createActionCreator = addPath('xPath')({ actionType: 'FOO' });
+  const createActionCreator = addPath('xPath')('FOO');
   const defaultActionCreator = createActionCreator();
   const fooActionCreator = createActionCreator(() => 'foo');
   const defaultAction = defaultActionCreator('fooBar');
@@ -128,13 +128,13 @@ tape('createPathspace -> createReducer -> reducer', (t) => {
   }
 
   const rootReducer = createReducer(initialState);
-  const createActionCreator = addPath('foo.bar')({ actionType: 'FOO', reducer: pathReducerA });
+  const createActionCreator = addPath('foo.bar')('FOO', pathReducerA);
   const indexPath = addPath('indexPath');
   const hiPath = addPath(0, addPath('arr', indexPath));
-  const indexAction = hiPath({ actionType: 'FOO' })();
+  const indexAction = hiPath('FOO')();
   const actionA = createActionCreator(() => 'foo');
   const actionAA = createActionCreator(() => 'bar');
-  const actionB = addPath(['foo', 'bar', 'baz', 0])({ actionType: 'FOO', reducer: pathReducerB })();
+  const actionB = addPath(['foo', 'bar', 'baz', 0])('FOO', pathReducerB)();
 
   t.doesNotThrow(() => rootReducer(initialState, actionA()), 'reducer: passes slice as first argument and full state as last argument');
   t.doesNotThrow(() => rootReducer(initialState, actionB()), 'reducer: handles array-index paths');
