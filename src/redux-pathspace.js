@@ -141,7 +141,7 @@ function createPathspace() {
 
   function addPath(p, parentPath) {
     const { lens, prefix } = setNamespace(p, parentPath);
-    function path({ actionType, reducer = defaultReducer, meta = {} } = {}) {
+    function path(actionType, reducer = defaultReducer, meta = {}) {
       validateAddActionArgs(actionType, reducer, meta);
       const type = getActionName(prefix, actionType);
       getNamespace(prefix).set(type, reducer);

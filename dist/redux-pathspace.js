@@ -1528,14 +1528,9 @@ function createPathspace() {
         lens = _setNamespace.lens,
         prefix = _setNamespace.prefix;
 
-    function path() {
-      var _ref = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-          actionType = _ref.actionType,
-          _ref$reducer = _ref.reducer,
-          reducer = _ref$reducer === void 0 ? defaultReducer : _ref$reducer,
-          _ref$meta = _ref.meta,
-          meta = _ref$meta === void 0 ? {} : _ref$meta;
-
+    function path(actionType) {
+      var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : defaultReducer;
+      var meta = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       validateAddActionArgs(actionType, reducer, meta);
       var type = getActionName(prefix, actionType);
       getNamespace(prefix).set(type, reducer);
@@ -1568,9 +1563,9 @@ function createPathspace() {
   function createReducer() {
     var initialState = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var initState = typeof initialState === 'function' ? initialState() : initialState;
-    return function reducer(state, _ref2) {
-      var type = _ref2.type,
-          payload = _ref2.payload;
+    return function reducer(state, _ref) {
+      var type = _ref.type,
+          payload = _ref.payload;
       var actions = getNamespace(getNamespaceName(type));
 
       if (actions && actions.has(type)) {
