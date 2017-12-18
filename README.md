@@ -2,7 +2,7 @@
 
 > Quickly & easily create path-based namespaces to add actions that map to reducers
 
-([live demo](https://codesandbox.io/s/y069v1oloz))
+([live demo](https://codesandbox.io/s/1v0lw6rj33))
 
 As simple as creating a new path:
 
