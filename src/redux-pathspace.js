@@ -6,7 +6,7 @@ import lensIndex from 'ramda/src/lensIndex';
 
 function createPathspace() {
   const PREFIX_JOINER = '.';
-  const PREFIX_SEPERATOR = '_';
+  const PREFIX_SEPERATOR = ':';
   const pathStringSymbol = Symbol('@@Pathspace->addPath->path[pathString]');
   const pathLensSymbol = Symbol('@@Pathspace->addPath->path[pathLens]');
 
@@ -66,7 +66,7 @@ function createPathspace() {
     return payload;
   }
 
-  function defaultPayloadHandler(payload) {
+  function noSideEffect(payload) {
     return payload;
   }
 
@@ -139,32 +139,42 @@ function createPathspace() {
     return { lens, prefix };
   }
 
-  function addPath(p, parentPath) {
+  function createNamespace(p, parentPath) {
     const { lens, prefix } = setNamespace(p, parentPath);
-    function path(actionType, reducer = defaultReducer, meta = {}) {
+
+    function mapActionToReducer(actionType, reducer = defaultReducer, meta = {}) {
       validateAddActionArgs(actionType, reducer, meta);
+
+      let _sideEffect = noSideEffect;
       const type = getActionName(prefix, actionType);
+
       getNamespace(prefix).set(type, reducer);
-      return function createActionCreator(payloadHandler = defaultPayloadHandler) {
-        if (typeof payloadHandler !== 'function') throw new Error('Payload handler supplied to "createActionCreator" must be a function');
-        return (...args) => ({
+
+      function actionCreator(...args) {
+        return {
           type,
-          payload: payloadHandler(...args),
+          payload: _sideEffect(...args),
           meta,
-        });
-      };
+        };
+      }
+
+      function withSideEffect(payloadHandler) {
+        if (typeof payloadHandler !== 'function') throw new Error('Payload handler supplied to "createActionCreator" must be a function');
+        _sideEffect = payloadHandler;
+      }
+
+      actionCreator.withSideEffect = withSideEffect;
+
+      return actionCreator;
     }
-    path[pathStringSymbol] = prefix;
-    path[pathLensSymbol] = lens;
-    return path;
-  }
 
-  function getView(path) {
-    return view(path[pathLensSymbol]);
-  }
-
-  function getLens(path) {
-    return path[pathLensSymbol];
+    return {
+      mapActionToReducer,
+      examine: view(lens),
+      [pathStringSymbol]: prefix,
+      [pathLensSymbol]: lens,
+      lens,
+    };
   }
 
   function createReducer(initialState = {}) {
@@ -182,13 +192,9 @@ function createPathspace() {
   }
 
   return {
-    addPath,
-    getLens,
-    getView,
+    createNamespace,
     createReducer,
   };
 }
 
-const { addPath, getLens, getView, createReducer } = createPathspace();
-
-export { addPath, getLens, getView, createReducer };
+export const { createNamespace, createReducer } = createPathspace();

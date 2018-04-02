@@ -10,7 +10,7 @@
     "eslint": "eslint src/redux-pathspace.js",
     "build": "babel src/redux-pathspace.js -d dist",
     "pretest": "npm run clean",
-    "prepublish": "npm run test"
+    "prepublishOnly": "npm run test"
   },
   "keywords": [
     "redux",
