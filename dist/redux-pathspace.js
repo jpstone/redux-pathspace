@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createReducer = exports.getView = exports.getLens = exports.addPath = void 0;
+exports.createReducer = exports.createNamespace = void 0;
 
 var _set = _interopRequireDefault(require("ramda/src/set"));
 
@@ -17,13 +17,15 @@ var _lensIndex = _interopRequireDefault(require("ramda/src/lensIndex"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
 function createPathspace() {
   var PREFIX_JOINER = '.';
-  var PREFIX_SEPERATOR = '_';
+  var PREFIX_SEPERATOR = ':';
   var pathStringSymbol = Symbol('@@Pathspace->addPath->path[pathString]');
   var pathLensSymbol = Symbol('@@Pathspace->addPath->path[pathLens]');
 
@@ -84,7 +86,7 @@ function createPathspace() {
     return payload;
   }
 
-  function defaultPayloadHandler(payload) {
+  function noSideEffect(payload) {
     return payload;
   }
 
@@ -166,49 +168,50 @@ function createPathspace() {
     };
   }
 
-  function addPath(p, parentPath) {
+  function createNamespace(p, parentPath) {
+    var _ref;
+
     var _setNamespace = setNamespace(p, parentPath),
         lens = _setNamespace.lens,
         prefix = _setNamespace.prefix;
 
-    function path(actionType) {
+    function mapActionToReducer(actionType) {
       var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : defaultReducer;
       var meta = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       validateAddActionArgs(actionType, reducer, meta);
+      var _sideEffect = noSideEffect;
       var type = getActionName(prefix, actionType);
       getNamespace(prefix).set(type, reducer);
-      return function createActionCreator() {
-        var payloadHandler = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : defaultPayloadHandler;
-        if (typeof payloadHandler !== 'function') throw new Error('Payload handler supplied to "createActionCreator" must be a function');
-        return function () {
-          return {
-            type: type,
-            payload: payloadHandler.apply(void 0, arguments),
-            meta: meta
-          };
+
+      function actionCreator() {
+        return {
+          type: type,
+          payload: _sideEffect.apply(void 0, arguments),
+          meta: meta
         };
-      };
+      }
+
+      function withSideEffect(payloadHandler) {
+        if (typeof payloadHandler !== 'function') throw new Error('Payload handler supplied to "createActionCreator" must be a function');
+        _sideEffect = payloadHandler;
+      }
+
+      actionCreator.withSideEffect = withSideEffect;
+      return actionCreator;
     }
 
-    path[pathStringSymbol] = prefix;
-    path[pathLensSymbol] = lens;
-    return path;
-  }
-
-  function getView(path) {
-    return (0, _view.default)(path[pathLensSymbol]);
-  }
-
-  function getLens(path) {
-    return path[pathLensSymbol];
+    return _ref = {
+      mapActionToReducer: mapActionToReducer,
+      examine: (0, _view.default)(lens)
+    }, _defineProperty(_ref, pathStringSymbol, prefix), _defineProperty(_ref, pathLensSymbol, lens), _defineProperty(_ref, "lens", lens), _ref;
   }
 
   function createReducer() {
     var initialState = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     var initState = typeof initialState === 'function' ? initialState() : initialState;
-    return function reducer(state, _ref) {
-      var type = _ref.type,
-          payload = _ref.payload;
+    return function reducer(state, _ref2) {
+      var type = _ref2.type,
+          payload = _ref2.payload;
       var actions = getNamespace(getNamespaceName(type));
 
       if (actions && actions.has(type)) {
@@ -221,20 +224,14 @@ function createPathspace() {
   }
 
   return {
-    addPath: addPath,
-    getLens: getLens,
-    getView: getView,
+    createNamespace: createNamespace,
     createReducer: createReducer
   };
 }
 
 var _createPathspace = createPathspace(),
-    addPath = _createPathspace.addPath,
-    getLens = _createPathspace.getLens,
-    getView = _createPathspace.getView,
+    createNamespace = _createPathspace.createNamespace,
     createReducer = _createPathspace.createReducer;
 
 exports.createReducer = createReducer;
-exports.getView = getView;
-exports.getLens = getLens;
-exports.addPath = addPath;
+exports.createNamespace = createNamespace;

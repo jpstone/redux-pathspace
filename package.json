@@ -1,6 +1,6 @@
 {
   "name": "redux-pathspace",
-  "version": "4.0.2",
+  "version": "5.0.0",
   "description": "",
   "main": "dist/redux-pathspace.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "eslint": "eslint src/redux-pathspace.js",
     "build": "babel src/redux-pathspace.js -d dist",
     "pretest": "npm run clean",
-    "prepublish": "npm run test"
+    "prepublishOnly": "npm run test"
   },
   "keywords": [
     "redux",

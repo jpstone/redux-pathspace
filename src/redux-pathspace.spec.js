@@ -6,24 +6,23 @@ function isFunction(f) {
   return [typeof f, 'function'];
 }
 
-tape('createPathspace', (t) => {
-  const { addPath, createReducer } = require('../dist/redux-pathspace');
-  t.equal(...isFunction(addPath), 'exports: function <addPath>');
+tape('redux-pathspace', (t) => {
+  const { createNamespace, createReducer } = require('../dist/redux-pathspace');
+  t.equal(...isFunction(createNamespace), 'exports: function <createNamespace>');
   t.equal(...isFunction(createReducer), 'exports: function <createReducer>');
   t.end();
 });
 
-tape('createPathspace -> addPath', (t) => {
-  const { addPath, createReducer } = require('../dist/redux-pathspace');
-  t.doesNotThrow(() => addPath('foo'), 'accepts: string');
-  t.doesNotThrow(() => addPath('foo.bar.baz'), 'accepts: stringed path representation');
-  t.doesNotThrow(() => addPath(['foo', 2]), 'accepts: array of strings or numbers');
-  t.doesNotThrow(() => addPath(0), 'accepts: number');
-  t.equal(...isFunction(addPath('baz')), 'returns: function <addAction>');
-  t.throws(() => addPath({}), Error, 'throws: when passed an object');
-  t.throws(() => addPath(['foo', 'bar', 'baz', {}]), Error, 'throws: when passed an array that does not consist of only strings or numbers');
-  t.throws(() => addPath('foo'), Error, 'throws: when passed an existing path');
-  t.throws(() => addPath(['foo.bar.baz', 1]), Error, 'throws: when using dot notation for path index in array');
+tape('redux-pathspace -> createNamespace', (t) => {
+  const { createNamespace, createReducer } = require('../dist/redux-pathspace');
+  t.doesNotThrow(() => createNamespace('foo'), 'accepts: string');
+  t.doesNotThrow(() => createNamespace('foo.bar.baz'), 'accepts: stringed path representation');
+  t.doesNotThrow(() => createNamespace(['foo', 2]), 'accepts: array of strings or numbers');
+  t.doesNotThrow(() => createNamespace(0), 'accepts: number');
+  t.throws(() => createNamespace({}), Error, 'throws: when passed an object');
+  t.throws(() => createNamespace(['foo', 'bar', 'baz', {}]), Error, 'throws: when passed an array that does not consist of only strings or numbers');
+  t.throws(() => createNamespace('foo'), Error, 'throws: when passed an existing path');
+  t.throws(() => createNamespace(['foo.bar.baz', 1]), Error, 'throws: when using dot notation for path index in array');
 
   const state = {
     xx: {
@@ -36,62 +35,93 @@ tape('createPathspace -> addPath', (t) => {
   }
 
   const rootReducer = createReducer(state);
-  const xPath = addPath('xx');
-  const yPath = addPath('yy', xPath);
-  const yPathActionCreator = yPath('FOO', yReducer)();
+  const xPath = createNamespace('xx');
+  const yPath = createNamespace('yy', xPath);
+  const yPathActionCreator = yPath.mapActionToReducer('FOO', yReducer);
 
   t.doesNotThrow(() => rootReducer(state, yPathActionCreator()), 'should properly compose lenses');
   t.end();
 });
 
-tape('createPathspace -> addPath -> path', (t) => {
-  const { addPath } = require('../dist/redux-pathspace');
-  const addAction = addPath('x');
+tape('redux-pathspace -> createNamespace -> namespace', (t) => {
+  const { createNamespace } = require('../dist/redux-pathspace');
+  const namespace = createNamespace('x');
 
-  t.doesNotThrow(() => addAction('foo'), 'accepts: actionType[, reducer][, meta]');
-  t.doesNotThrow(() => addAction('bar', () => {}), 'accepts: object with optional reducer');
-  t.doesNotThrow(() => addAction('baz', () => {}, {}), 'accepts: object with optional meta property');
-  t.equal(...isFunction(addAction('x')), 'returns: function <createActionCreator>');
-  t.throws(() => addAction('foo'), Error, 'throws: when supplied an existing actionType for the given namespace');
-  t.throws(() => addAction('alpha', 0), Error, 'throws: when optional reducer property is not a function');
-  t.throws(() => addAction('omega', () => {}, []), Error, 'throws: when optional meta property is not a plain object');
+  t.equal(3, Object.keys(namespace).length, 'returns an object with 3 properties');
+  t.equal(...isFunction(namespace.mapActionToReducer), 'returns a `mapActionToReducer` function');
+  t.equal(...isFunction(namespace.examine), 'returns a `examine` function');
+  t.equal(...isFunction(namespace.examine), 'provides a function');
   t.end();
 });
 
-tape('createPathspace -> addPath -> path -> createActionCreator', (t) => {
-  const { addPath } = require('../dist/redux-pathspace');
-  const createActionCreator = addPath('y')('foo');
+tape('redux-pathspace -> createNamespace -> namespace -> examine', (t) => {
+  const { createNamespace } = require('../dist/redux-pathspace');
+  const state = {
+    m: 'foo',
+  };
+  const xPath = createNamespace('m');
+  const xView = xPath.examine(state);
 
-  t.doesNotThrow(() => createActionCreator(), 'accepts: optional [payloadHandler]');
-  t.equal(...isFunction(createActionCreator(() => {})), 'returns: function <actionCreator>');
-  t.throws(() => createActionCreator(0), Error, 'throws: when optional payloadHandler is not a function');
+  t.equal(xView, 'foo', 'should properly examine path');
   t.end();
 });
 
-tape('createPathspace -> addPath -> path -> createActionCreator -> actionCreator', (t) => {
-  const { addPath } = require('../dist/redux-pathspace');
-  const createActionCreator = addPath('xPath')('FOO');
-  const defaultActionCreator = createActionCreator();
-  const fooActionCreator = createActionCreator(() => 'foo');
-  const defaultAction = defaultActionCreator('fooBar');
-  const fooAction = fooActionCreator();
+tape('redux-pathspace -> createNamespace -> namespace -> mapActionToReducer', (t) => {
+  const { createNamespace } = require('../dist/redux-pathspace');
+  const namespace = createNamespace('X');
 
-  t.equal(defaultAction.type, 'xPath_FOO', 'returns: prefixed action.type');
-  t.isEquivalent(defaultAction.meta, {}, 'returns: default meta object');
-  t.equal(defaultAction.payload, 'fooBar', 'returns: supplied action.payload data');
-  t.equal(fooAction.payload, 'foo', 'returns: user defined payloadHandler return value into action.payload');
+  t.doesNotThrow(() => namespace.mapActionToReducer('foo'), 'accepts: actionType[, reducer][, meta]');
+  t.doesNotThrow(() => namespace.mapActionToReducer('bar', () => {}), 'accepts: object with optional reducer');
+  t.doesNotThrow(() => namespace.mapActionToReducer('baz', () => {}, {}), 'accepts: object with optional meta property');
+  t.equal(...isFunction(namespace.mapActionToReducer('x')), 'returns: function <createActionCreator>');
+  t.throws(() => namespace.mapActionToReducer('foo'), Error, 'throws: when supplied an existing actionType for the given namespace');
+  t.throws(() => namespace.mapActionToReducer('alpha', 0), Error, 'throws: when optional reducer property is not a function');
+  t.throws(() => namespace.mapActionToReducer('omega', () => {}, []), Error, 'throws: when optional meta property is not a plain object');
   t.end();
 });
 
-tape('createPathspace -> createReducer', (t) => {
+tape('redux-pathspace -> createNamespace -> namespace -> mapActionToReducer -> actionCreator', (t) => {
+  const { createNamespace } = require('../dist/redux-pathspace');
+  const actionCreator = createNamespace('xPath').mapActionToReducer('FOO');
+  const action = actionCreator('fooBar');
+
+  t.equal(action.type, 'xPath:FOO', 'returns: prefixed action.type');
+  t.isEquivalent(action.meta, {}, 'returns: default meta object');
+  t.equal(action.payload, 'fooBar', 'returns: supplied action.payload data');
+  t.end();
+});
+
+tape('redux-pathspace -> createNamespace -> namespace -> mapActionToReducer -> withSideEffect', (t) => {
+  const { createNamespace } = require('../dist/redux-pathspace');
+  const actionCreator = createNamespace('y').mapActionToReducer('FOO');
+
+  t.throws(() => actionCreator.withSideEffect(0), Error, 'throws: when optional payloadHandler is not a function');
+  actionCreator.withSideEffect(() => 'foo');
+  t.equal(actionCreator().payload, 'foo', 'properly adds side effect');
+  t.end();
+});
+
+tape('redux-pathspace -> createNamespace -> namespace -> lens', (t) => {
+  const view = require('ramda/src/view');
+  const { createNamespace, getLens } = require('../dist/redux-pathspace');
+  const state = { r: 'foo' };
+  const rPath = createNamespace('r');
+  const rLens = rPath.lens;
+
+  t.equal(view(rLens, state), 'foo', 'getLens should properly provide lens');
+  t.end();
+});
+
+
+tape('redux-pathspace -> createReducer', (t) => {
   const { createReducer } = require('../dist/redux-pathspace');
   t.doesNotThrow(() => createReducer(0), 'accepts: any');
   t.equal(...isFunction(createReducer()), 'returns: function');
   t.end();
 });
 
-tape('createPathspace -> createReducer -> reducer', (t) => {
-  const { addPath, createReducer } = require('../dist/redux-pathspace');
+tape('redux-pathspace -> createReducer -> reducer', (t) => {
+  const { createNamespace, createReducer } = require('../dist/redux-pathspace');
   const is = 'foo';
   const reducer = createReducer(is);
 
@@ -128,18 +158,15 @@ tape('createPathspace -> createReducer -> reducer', (t) => {
   }
 
   const rootReducer = createReducer(initialState);
-  const createActionCreator = addPath('foo.bar')('FOO', pathReducerA);
-  const indexPath = addPath('indexPath');
-  const hiPath = addPath(0, addPath('arr', indexPath));
-  const indexAction = hiPath('FOO')();
-  const actionA = createActionCreator(() => 'foo');
-  const actionAA = createActionCreator(() => 'bar');
-  const actionB = addPath(['foo', 'bar', 'baz', 0])('FOO', pathReducerB)();
+  const actionCreator = createNamespace('foo.bar').mapActionToReducer('FOO', pathReducerA);
+  const indexPath = createNamespace('indexPath');
+  const hiPath = createNamespace(0, createNamespace('arr', indexPath));
+  const indexAction = hiPath.mapActionToReducer('FOO');
+  const actionB = createNamespace(['foo', 'bar', 'baz', 0]).mapActionToReducer('FOO', pathReducerB);
 
-  t.doesNotThrow(() => rootReducer(initialState, actionA()), 'reducer: passes slice as first argument and full state as last argument');
+  t.doesNotThrow(() => rootReducer(initialState, actionCreator('foo')), 'reducer: passes slice as first argument payload as second and full state as last argument');
   t.doesNotThrow(() => rootReducer(initialState, actionB()), 'reducer: handles array-index paths');
   t.doesNotThrow(() => rootReducer(initialState, indexAction()), 'properly handles index paths');
-  t.throws(() => rootReducer(initialState, actionAA()), 'reducer: passes payload as second argument');
 
   const newState = rootReducer(initialState, actionB());
 
@@ -147,25 +174,3 @@ tape('createPathspace -> createReducer -> reducer', (t) => {
   t.end();
 });
 
-tape('createPathspace -> getLens', (t) => {
-  const view = require('ramda/src/view');
-  const { addPath, getLens } = require('../dist/redux-pathspace');
-  const state = { r: 'foo' };
-  const rPath = addPath('r');
-  const rLens = getLens(rPath);
-
-  t.equal(view(rLens, state), 'foo', 'getLens should properly get lens');
-  t.end();
-});
-
-tape('createPathspace -> getView', (t) => {
-  const { addPath, getView } = require('../dist/redux-pathspace');
-  const state = {
-    m: 'foo',
-  };
-  const xPath = addPath('m');
-  const xView = getView(xPath);
-
-  t.equal(xView(state), 'foo', 'should properly view path');
-  t.end();
-});
