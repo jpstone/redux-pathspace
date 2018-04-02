@@ -45,7 +45,6 @@ function getBazItems() {
 }
 
 const getBazItemsActionCreator = bazPath.mapActionToReducer('GET_ITEMS').withSideEffect(getBazItems);
-console.log(fooHelloActionCreator()); // -> { type: 'baz:GET_ITEMS', payload: undefined, meta: {} }
 store.dispatch(getBazItemsActionCreator());
 
 // when promise is finished
