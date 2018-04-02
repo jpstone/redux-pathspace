@@ -2,6 +2,8 @@
 
 > Quickly & easily create path-based namespaces to add actions that map to reducers
 
+## ([live demo](https://codesandbox.io/s/48zkpvnz47))
+
 ## Usage
 
 ```js

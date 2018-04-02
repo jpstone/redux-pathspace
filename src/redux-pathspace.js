@@ -161,6 +161,7 @@ function createPathspace() {
       function withSideEffect(payloadHandler) {
         if (typeof payloadHandler !== 'function') throw new Error('Payload handler supplied to "createActionCreator" must be a function');
         _sideEffect = payloadHandler;
+        return actionCreator;
       }
 
       actionCreator.withSideEffect = withSideEffect;
