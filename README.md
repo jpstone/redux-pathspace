@@ -56,7 +56,7 @@ store.getState(); // -> { foo: 'hello', baz: ['Item 1', 'Item 2', 'Item 3'] }
 baz.examine(store.getState()); // ['Item 1', 'Item 2', 'Item 3' ]
 
 // paths can also be created for array indexes
-const bazIndex1 = createNamespace(2, baz); // passing a namespace as a second argument will create a sub-path
+const bazIndex1 = createNamespace(1, baz); // passing a namespace as a second argument will create a sub-path
 bazIndex1.examine(store.getState()); // -> 'Item 2'
 
 ```
