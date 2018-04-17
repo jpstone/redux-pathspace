@@ -3,6 +3,7 @@ import view from 'ramda/src/view';
 import lensPath from 'ramda/src/lensPath';
 import lensProp from 'ramda/src/lensProp';
 import lensIndex from 'ramda/src/lensIndex';
+import isPlainObject from 'lodash.isplainobject';
 
 function createPathspace() {
   const PREFIX_JOINER = '.';
@@ -198,4 +199,25 @@ function createPathspace() {
   };
 }
 
-export const { createNamespace, createReducer } = createPathspace();
+const { createNamespace, createReducer } = createPathspace();
+
+function getKey(prevKey, key) {
+  return `${prevKey}${prevKey ? '.' : ''}${key}`;
+}
+
+function mapNamespacesToObject(obj, prevKey = '') {
+  return Object.keys(obj).reduce((cloned, key) => {
+    if (isPlainObject(obj[key])) {
+      return {
+        ...cloned,
+        [key]: {
+          ...mapNamespacesToObject(obj[key], getKey(prevKey, key)),
+          ...createNamespace(getKey(prevKey, key)),
+        },
+      };
+    }
+    return { ...cloned, [key]: createNamespace(getKey(prevKey, key)) };
+  }, {});
+}
+
+export { createNamespace, createReducer, mapNamespacesToObject };

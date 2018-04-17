@@ -43,18 +43,20 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@babel/cli": "^7.0.0-beta.34",
-    "@babel/core": "^7.0.0-beta.34",
-    "@babel/plugin-proposal-object-rest-spread": "^7.0.0-beta.34",
-    "@babel/plugin-transform-modules-commonjs": "^7.0.0-beta.34",
-    "@babel/preset-env": "^7.0.0-beta.34",
+    "@babel/cli": "^7.0.0-beta.44",
+    "@babel/core": "^7.0.0-beta.44",
+    "@babel/plugin-proposal-object-rest-spread": "^7.0.0-beta.44",
+    "@babel/plugin-transform-modules-commonjs": "^7.0.0-beta.44",
+    "@babel/preset-env": "^7.0.0-beta.44",
     "browserify": "^14.5.0",
-    "eslint": "^4.12.1",
+    "eslint": "^4.19.1",
     "eslint-config-airbnb-base": "^12.1.0",
-    "eslint-plugin-import": "^2.8.0",
-    "tape": "^4.8.0"
+    "eslint-plugin-import": "^2.11.0",
+    "lodash.isplainobject": "^4.0.6",
+    "tape": "^4.9.0"
   },
   "dependencies": {
-    "ramda": "^0.25.0"
+    "ramda": "^0.25.0",
+    "lodash.isplainobject": "^4.0.6"
   }
 }
