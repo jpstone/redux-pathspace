@@ -3,6 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.mapNamespacesToObject = mapNamespacesToObject;
 exports.createReducer = exports.createNamespace = void 0;
 
 var _set = _interopRequireDefault(require("ramda/src/set"));
@@ -15,11 +16,21 @@ var _lensProp = _interopRequireDefault(require("ramda/src/lensProp"));
 
 var _lensIndex = _interopRequireDefault(require("ramda/src/lensIndex"));
 
+var _lodash = _interopRequireDefault(require("lodash.isplainobject"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
+
+function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
@@ -236,3 +247,18 @@ var _createPathspace = createPathspace(),
 
 exports.createReducer = createReducer;
 exports.createNamespace = createNamespace;
+
+function getKey(prevKey, key) {
+  return "".concat(prevKey).concat(prevKey ? '.' : '').concat(key);
+}
+
+function mapNamespacesToObject(obj) {
+  var prevKey = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+  return Object.keys(obj).reduce(function (cloned, key) {
+    if ((0, _lodash.default)(obj[key])) {
+      return _objectSpread({}, cloned, _defineProperty({}, key, _objectSpread({}, mapNamespacesToObject(obj[key], getKey(prevKey, key)), createNamespace(getKey(prevKey, key)))));
+    }
+
+    return _objectSpread({}, cloned, _defineProperty({}, key, createNamespace(getKey(prevKey, key))));
+  }, {});
+}
