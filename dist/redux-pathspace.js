@@ -42,7 +42,9 @@ function createPathspace() {
 
   var _namespaces = new Map();
 
-  var _store = {};
+  var _store;
+
+  var _actionCreators;
 
   function getPathPrefix(path) {
     return Array.isArray(path) ? path.join(PREFIX_JOINER) : path;
@@ -99,8 +101,10 @@ function createPathspace() {
     return payload;
   }
 
-  function noSideEffect(payload) {
-    return payload;
+  function createNoSideEffect() {
+    return function (payload) {
+      return payload;
+    };
   }
 
   function getNamespaceName(actionType) {
@@ -192,25 +196,21 @@ function createPathspace() {
       var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : defaultReducer;
       var meta = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       validateAddActionArgs(actionType, reducer, meta);
-      var _sideEffect = noSideEffect;
+      var _createSideEffect = createNoSideEffect;
       var type = getActionName(prefix, actionType);
       getNamespace(prefix).set(type, reducer);
 
       function actionCreator() {
-        for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-          args[_key] = arguments[_key];
-        }
-
         return {
           type: type,
-          payload: _sideEffect.apply(void 0, args.concat([_store.dispatch])),
+          payload: _createSideEffect(_store, _actionCreators).apply(void 0, arguments),
           meta: meta
         };
       }
 
-      function withSideEffect(payloadHandler) {
-        if (typeof payloadHandler !== 'function') throw new Error('Payload handler supplied to "createActionCreator" must be a function');
-        _sideEffect = payloadHandler;
+      function withSideEffect(createSideEffect) {
+        if (typeof createSideEffect !== 'function') throw new Error('Value supplied to "withSideEffect" must be a function');
+        _createSideEffect = createSideEffect;
         return actionCreator;
       }
 
@@ -241,8 +241,9 @@ function createPathspace() {
     };
   }
 
-  function setStore(store) {
+  function setStore(store, actionCreators) {
     _store = store;
+    _actionCreators = actionCreators;
     return _store;
   }
 

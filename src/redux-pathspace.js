@@ -12,7 +12,8 @@ function createPathspace() {
   const pathLensSymbol = Symbol('@@Pathspace->addPath->path[pathLens]');
 
   const _namespaces = new Map();
-  let _store = {};
+  let _store;
+  let _actionCreators;
 
   function getPathPrefix(path) {
     return Array.isArray(path)
@@ -68,8 +69,8 @@ function createPathspace() {
     return payload;
   }
 
-  function noSideEffect(payload) {
-    return payload;
+  function createNoSideEffect() {
+    return payload => payload;
   }
 
   function getNamespaceName(actionType) {
@@ -147,7 +148,7 @@ function createPathspace() {
     function mapActionToReducer(actionType, reducer = defaultReducer, meta = {}) {
       validateAddActionArgs(actionType, reducer, meta);
 
-      let _sideEffect = noSideEffect;
+      let _createSideEffect = createNoSideEffect;
       const type = getActionName(prefix, actionType);
 
       getNamespace(prefix).set(type, reducer);
@@ -155,14 +156,14 @@ function createPathspace() {
       function actionCreator(...args) {
         return {
           type,
-          payload: _sideEffect(...args, _store.dispatch),
+          payload: _createSideEffect(_store, _actionCreators)(...args),
           meta,
         };
       }
 
-      function withSideEffect(payloadHandler) {
-        if (typeof payloadHandler !== 'function') throw new Error('Payload handler supplied to "createActionCreator" must be a function');
-        _sideEffect = payloadHandler;
+      function withSideEffect(createSideEffect) {
+        if (typeof createSideEffect !== 'function') throw new Error('Value supplied to "withSideEffect" must be a function');
+        _createSideEffect = createSideEffect;
         return actionCreator;
       }
 
@@ -194,8 +195,9 @@ function createPathspace() {
     };
   }
 
-  function setStore(store) {
+  function setStore(store, actionCreators) {
     _store = store;
+    _actionCreators = actionCreators;
     return _store;
   }
 

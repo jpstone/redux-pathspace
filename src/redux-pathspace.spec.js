@@ -39,14 +39,15 @@ tape('redux-pathspace', (t) => {
   t.test('setStore', (tt) => {
     const { createStore } = require('redux');
     const initialState = { foooo: 'bar', bazzzz: 'zab' };
-    const store = setStore(createStore(createReducer(initialState), initialState));
     const foo = createNamespace('foooo');
     const baz = createNamespace('bazzzz');
     const bazActionCreator = baz.mapActionToReducer('SET', () => 'changed');
     const fooActionCreator = foo.mapActionToReducer('CHANGE_BAZ_TOO')
-      .withSideEffect((dispatch) => { dispatch(bazActionCreator()); return 'hello'; });
+      .withSideEffect(({ dispatch }, ax) => () => { dispatch(ax.bazActionCreator()); return 'hello'; });
+    const actionCreators = { bazActionCreator, fooActionCreator };
+    const store = setStore(createStore(createReducer(initialState), initialState), actionCreators);
     store.dispatch(fooActionCreator());
-    tt.equal(store.getState().bazzzz, 'changed', 'properly sets store so dispatch can be passed to side effects');
+    tt.equal(store.getState().bazzzz, 'changed', 'properly sets store and action creators so dispatch/ation creators can be passed to side effects');
     tt.end();
   });
 
@@ -121,7 +122,7 @@ tape('redux-pathspace', (t) => {
           const actionCreator = createNamespace('y').mapActionToReducer('FOO');
 
           ttttt.throws(() => actionCreator.withSideEffect(0), Error, 'throws when optional side-effecet is not a function');
-          actionCreator.withSideEffect(() => 'foo');
+          actionCreator.withSideEffect(() => () => 'foo');
           ttttt.equal(actionCreator().payload, 'foo', 'properly adds side effect');
           ttttt.end();
         });
