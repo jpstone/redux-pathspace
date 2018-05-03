@@ -4,7 +4,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.mapNamespacesToObject = mapNamespacesToObject;
-exports.createReducer = exports.createNamespace = void 0;
+exports.setStore = exports.createReducer = exports.createNamespace = void 0;
 
 var _set = _interopRequireDefault(require("ramda/src/set"));
 
@@ -41,6 +41,8 @@ function createPathspace() {
   var pathLensSymbol = Symbol('@@Pathspace->addPath->path[pathLens]');
 
   var _namespaces = new Map();
+
+  var _store = {};
 
   function getPathPrefix(path) {
     return Array.isArray(path) ? path.join(PREFIX_JOINER) : path;
@@ -195,9 +197,13 @@ function createPathspace() {
       getNamespace(prefix).set(type, reducer);
 
       function actionCreator() {
+        for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+          args[_key] = arguments[_key];
+        }
+
         return {
           type: type,
-          payload: _sideEffect.apply(void 0, arguments),
+          payload: _sideEffect.apply(void 0, args.concat([_store.dispatch])),
           meta: meta
         };
       }
@@ -235,16 +241,24 @@ function createPathspace() {
     };
   }
 
+  function setStore(store) {
+    _store = store;
+    return _store;
+  }
+
   return {
     createNamespace: createNamespace,
-    createReducer: createReducer
+    createReducer: createReducer,
+    setStore: setStore
   };
 }
 
 var _createPathspace = createPathspace(),
     createNamespace = _createPathspace.createNamespace,
-    createReducer = _createPathspace.createReducer;
+    createReducer = _createPathspace.createReducer,
+    setStore = _createPathspace.setStore;
 
+exports.setStore = setStore;
 exports.createReducer = createReducer;
 exports.createNamespace = createNamespace;
 

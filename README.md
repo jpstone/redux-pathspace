@@ -64,7 +64,7 @@ bazIndex1.examine(store.getState()); // -> 'Item 2'
 ## API
 
 ```js
-import { createNamespace, createReducer, mapNamespacesToObject } from 'redux-pathspace';
+import { createNamespace, createReducer, mapNamespacesToObject, setStore } from 'redux-pathspace';
 ```
 
 ### createNamespace(path: string|array|number|func[, parentPath: path]);
@@ -101,7 +101,24 @@ A new action creator that, when called, returns a flux standard action (FSA) tha
 #### actionCreator.withSideEffect(sideEffect: func);
 
 Adds a side effect to the `actionCreator`. 
+
 - `sideEffect` - This function gets passed the arguments supplied to `actionCreator(...args)` to execute any side effects before getting set onto action.payload. If not supplied, whatever is passed to `actionCreator` will be simply be set on the `payload` property of the FSA.
+
+The `sideEffect` you specify gets called like this:
+
+```js
+function actionCreator(...args) {
+  return {
+    type: 'SOME_ACTION',
+    payload: sideEffect(...args, dispatch),
+    meta: {},
+  };
+}
+```
+
+Notice `dispatch` is passed as the last argument. If you used `setStore` (see documentation below), `dispatch` will get passed as the last argument to all `sideEffect` functions you specify. The rationale behind this is that your reducers should be as simple and pure as possible--ideally, simple enough to where they return primitive values in most cases, and are completely unaware of the shape of the rest of your state. When you need to update other parts of the state in order to properly set the portion of the state your reducer is concerned with, then that is a side-effect. Therefore `dispatch` gets passed as the last argument to `sideEffect` so any other updates to the state can be completely transparent when you call `dispatch(actionCreator('foo'))`.
+
+If you didn't let `redux-pathspace` know about your store by using `setStore`, then `dispatch` will be undefined and unavailable to your `sideEffect` functions (unless you manually pass it in your action creators).
 
 ### const reducer = createReducer(initialState: string|array|number|object);
 
@@ -126,6 +143,24 @@ namespaces['myArr[1]'].examine(initialState); // -> 'bar'
 ```
 
 - `obj` - A plain object to recursively create a new object that has a namespace for each key in `obj`.
+
+### setStore(store: object);
+
+This function essentially makes your redux store available to `redux-pathspace`. The motivation for this API method was to make `store.dispatch` available to the function you pass to `withSideEffect` without having to pass it manually each time you create a side-effect that dispatches other actions before updating the state. This gives you the power to focus on small "slices" of the state in your reducers--keeping them simple and pure--while at the same time updating other parts of the state if you need to (by dispatching actions that handle those other parts, thus letting each reducer do its "job" for each part of the state you're concerned with). This way, you can use something like `mapNamespacesToObject` to create namespaces for each part of your state (no matter how deep) and return simple values in your reducers, without worrying about the larger shape of your state...without limiting your ability to affect other parts of the state in a controlled, predictable way.
+
+
+- `object` - A redux store returned from `createStore`. Returns the same redux store you pass it.
+
+Example usage:
+
+```js
+import { createStore } from 'redux';
+import { createReducer, setStore } from 'redux-pathspace';
+
+const initialState = { foo: 'bar', baz: [] };
+
+export const store = setStore(createStore(createReducer(initialState), initialState));
+```
 
 ## Install
 

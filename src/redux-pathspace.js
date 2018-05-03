@@ -12,6 +12,7 @@ function createPathspace() {
   const pathLensSymbol = Symbol('@@Pathspace->addPath->path[pathLens]');
 
   const _namespaces = new Map();
+  let _store = {};
 
   function getPathPrefix(path) {
     return Array.isArray(path)
@@ -154,7 +155,7 @@ function createPathspace() {
       function actionCreator(...args) {
         return {
           type,
-          payload: _sideEffect(...args),
+          payload: _sideEffect(...args, _store.dispatch),
           meta,
         };
       }
@@ -193,13 +194,19 @@ function createPathspace() {
     };
   }
 
+  function setStore(store) {
+    _store = store;
+    return _store;
+  }
+
   return {
     createNamespace,
     createReducer,
+    setStore,
   };
 }
 
-const { createNamespace, createReducer } = createPathspace();
+const { createNamespace, createReducer, setStore } = createPathspace();
 
 function getKey(prevKey, key) {
   return `${prevKey}${prevKey ? '.' : ''}${key}`;
@@ -220,4 +227,4 @@ function mapNamespacesToObject(obj, prevKey = '') {
   }, {});
 }
 
-export { createNamespace, createReducer, mapNamespacesToObject };
+export { createNamespace, createReducer, setStore, mapNamespacesToObject };

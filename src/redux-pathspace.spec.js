@@ -7,10 +7,15 @@ function isFunction(f) {
 }
 
 tape('redux-pathspace', (t) => {
-  const { createNamespace, createReducer, mapNamespacesToObject } = require('../dist/redux-pathspace');
-  t.equal(...isFunction(createNamespace), 'exports a `createNamespace` function');
-  t.equal(...isFunction(createReducer), 'exports a `createReducer` function');
-  t.equal(...isFunction(mapNamespacesToObject), 'exports a `mapNamespacesToObject` function');
+  const { createNamespace, createReducer, setStore, mapNamespacesToObject } = require('../dist/redux-pathspace');
+
+  t.test('properly exports api methods', (tt) => {
+    tt.equal(...isFunction(createNamespace), 'exports a `createNamespace` function');
+    tt.equal(...isFunction(createReducer), 'exports a `createReducer` function');
+    tt.equal(...isFunction(setStore), 'exports a `setStore` function');
+    tt.equal(...isFunction(mapNamespacesToObject), 'exports a `mapNamespacesToObject` function');
+    tt.end();
+  });
 
   t.test('mapNamespacesToObject', (tt) => {
     const initialState = {
@@ -24,10 +29,24 @@ tape('redux-pathspace', (t) => {
 
     const mapped = mapNamespacesToObject(initialState);
 
-    t.equal(...isFunction(mapped.fooo.examine), 'properly maps namespaces');
-    t.equal(...isFunction(mapped.fooo.bar.examine), 'properly maps namespaces');
-    t.equal(...isFunction(mapped.fooo.baz.examine), 'properly maps namespaces');
-    t.equal(...isFunction(mapped.fooo.baz.zab.examine), 'properly maps namespaces');
+    tt.equal(...isFunction(mapped.fooo.examine), 'properly maps namespaces');
+    tt.equal(...isFunction(mapped.fooo.bar.examine), 'properly maps namespaces');
+    tt.equal(...isFunction(mapped.fooo.baz.examine), 'properly maps namespaces');
+    tt.equal(...isFunction(mapped.fooo.baz.zab.examine), 'properly maps namespaces');
+    tt.end();
+  });
+
+  t.test('setStore', (tt) => {
+    const { createStore } = require('redux');
+    const initialState = { foooo: 'bar', bazzzz: 'zab' };
+    const store = setStore(createStore(createReducer(initialState), initialState));
+    const foo = createNamespace('foooo');
+    const baz = createNamespace('bazzzz');
+    const bazActionCreator = baz.mapActionToReducer('SET', () => 'changed');
+    const fooActionCreator = foo.mapActionToReducer('CHANGE_BAZ_TOO')
+      .withSideEffect((dispatch) => { dispatch(bazActionCreator()); return 'hello'; });
+    store.dispatch(fooActionCreator());
+    tt.equal(store.getState().bazzzz, 'changed', 'properly sets store so dispatch can be passed to side effects');
     tt.end();
   });
 
