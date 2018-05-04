@@ -35,7 +35,7 @@ function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
 function createPathspace() {
-  var PREFIX_JOINER = '.';
+  var PATH_JOINER = '.';
   var PREFIX_SEPERATOR = ':';
   var pathStringSymbol = Symbol('@@Pathspace->addPath->path[pathString]');
   var pathLensSymbol = Symbol('@@Pathspace->addPath->path[pathLens]');
@@ -47,7 +47,10 @@ function createPathspace() {
   var _actionCreators;
 
   function getPathPrefix(path) {
-    return Array.isArray(path) ? path.join(PREFIX_JOINER) : path;
+    if (!Array.isArray(path)) return path;
+    return path.reduce(function (stringified, location) {
+      return typeof location === 'number' ? "".concat(stringified.slice(0, -1), "[").concat(location, "].") : "".concat(stringified).concat(location, ".");
+    }, '').slice(0, -1);
   }
 
   function reducerWrapper(lens, reducer) {
@@ -80,7 +83,7 @@ function createPathspace() {
       if (!bool) return false;
 
       if (typeof val === 'string' || typeof val === 'number') {
-        if (typeof val === 'string') return val.split(PREFIX_JOINER).length === 1;
+        if (typeof val === 'string') return val.split(PATH_JOINER).length === 1;
         return true;
       }
 
@@ -108,7 +111,7 @@ function createPathspace() {
   }
 
   function getNamespaceName(actionType) {
-    var split = actionType.split(PREFIX_SEPERATOR)[0].split(PREFIX_JOINER);
+    var split = actionType.split(PREFIX_SEPERATOR)[0].split(PATH_JOINER);
     return split.length > 1 ? split : split[0];
   }
 
@@ -126,18 +129,18 @@ function createPathspace() {
       }
 
       if (typeof subPath === 'string') {
-        return _toConsumableArray(path).concat(_toConsumableArray(subPath.split(PREFIX_JOINER)));
+        return _toConsumableArray(path).concat(_toConsumableArray(subPath.split(PATH_JOINER)));
       }
 
       return _toConsumableArray(path).concat([subPath]);
     }
 
     if (Array.isArray(subPath)) {
-      return "".concat(path, ".").concat(subPath.join(PREFIX_JOINER));
+      return "".concat(path, ".").concat(subPath.join(PATH_JOINER));
     }
 
     if (typeof subPath === 'number') {
-      return _toConsumableArray(path.split(PREFIX_JOINER)).concat([subPath]);
+      return _toConsumableArray(path.split(PATH_JOINER)).concat([subPath]);
     }
 
     return "".concat(path, ".").concat(subPath);
@@ -152,7 +155,7 @@ function createPathspace() {
 
   function ensurePath(path) {
     if (!Array.isArray(path) && typeof path !== 'number') {
-      var split = path.split(PREFIX_JOINER);
+      var split = path.split(PATH_JOINER);
       if (split.length > 1) return split;
       return split[0];
     }
@@ -263,17 +266,34 @@ exports.setStore = setStore;
 exports.createReducer = createReducer;
 exports.createNamespace = createNamespace;
 
-function getKey(prevKey, key) {
-  return "".concat(prevKey).concat(prevKey ? '.' : '').concat(key);
+function createArrayNamespace(path) {
+  var _indexNamespaces = [];
+  var namespace = createNamespace(path);
+
+  function arrayNamespace(index) {
+    if (!_indexNamespaces[index]) _indexNamespaces[index] = createNamespace(_toConsumableArray(path).concat([index]));
+    return _indexNamespaces[index];
+  }
+
+  Object.keys(namespace).forEach(function (key) {
+    arrayNamespace[key] = namespace[key];
+  });
+  return arrayNamespace;
 }
 
 function mapNamespacesToObject(obj) {
-  var prevKey = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+  var prevKey = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
   return Object.keys(obj).reduce(function (cloned, key) {
+    var path = _toConsumableArray(prevKey).concat([key]);
+
     if ((0, _lodash.default)(obj[key])) {
-      return _objectSpread({}, cloned, _defineProperty({}, key, _objectSpread({}, mapNamespacesToObject(obj[key], getKey(prevKey, key)), createNamespace(getKey(prevKey, key)))));
+      return _objectSpread({}, cloned, _defineProperty({}, key, _objectSpread({}, mapNamespacesToObject(obj[key], path), createNamespace(path))));
     }
 
-    return _objectSpread({}, cloned, _defineProperty({}, key, createNamespace(getKey(prevKey, key))));
+    if (Array.isArray(obj[key])) {
+      return _objectSpread({}, cloned, _defineProperty({}, key, createArrayNamespace(path)));
+    }
+
+    return _objectSpread({}, cloned, _defineProperty({}, key, createNamespace(path)));
   }, {});
 }

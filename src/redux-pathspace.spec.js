@@ -20,7 +20,7 @@ tape('redux-pathspace', (t) => {
   t.test('mapNamespacesToObject', (tt) => {
     const initialState = {
       fooo: {
-        bar: [],
+        bar: [1, 2, 3, 4],
         baz: {
           zab: undefined,
         },
@@ -33,6 +33,13 @@ tape('redux-pathspace', (t) => {
     tt.equal(...isFunction(mapped.fooo.bar.examine), 'properly maps namespaces');
     tt.equal(...isFunction(mapped.fooo.baz.examine), 'properly maps namespaces');
     tt.equal(...isFunction(mapped.fooo.baz.zab.examine), 'properly maps namespaces');
+    tt.equal(...isFunction(mapped.fooo.bar), 'creates a function for array paths');
+    tt.equal(mapped.fooo.bar(2).examine(initialState), 3, 'properly handles array indexes');
+
+    const secondIndexActionCreator = mapped.fooo.bar(2).mapActionToReducer('FOO');
+
+    tt.equal(secondIndexActionCreator().type, 'fooo.bar[2]:FOO', 'properly handles actions');
+    tt.throws(() => mapped.fooo.bar(2).mapActionToReducer('FOO'), 'throws when duplicate actions created');
     tt.end();
   });
 
