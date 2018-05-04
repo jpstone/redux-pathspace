@@ -58,6 +58,8 @@ baz.examine(store.getState()); // ['Item 1', 'Item 2', 'Item 3' ]
 // paths can also be created for array indexes
 const bazIndex1 = createNamespace(1, baz); // passing a namespace as a second argument will create a sub-path
 bazIndex1.examine(store.getState()); // -> 'Item 2'
+bazIndex1ActionCreator = bazIndex1.mapActionToReducer('FOO');
+bazIndex1ActionCreator(); // -> { type: baz[1]:FOO, payload: undefined, meta: {} }
 
 ```
 
@@ -84,11 +86,11 @@ Returns a new namespace object. You can think of a namespace as a self-contained
 - `meta` - Object to set on the `action.meta` property. Defaults to `{}`.
 - returns - (function) - A new `actionCreator`.
 
-#### namespace.examine(item: object|array);
+#### namespace.examine(item: object|array|string);
 
 Function that peers into the specified depth of an object based on the path of the namespace and returns its value.
 
-- `item` - Object/array to inspect. If there's no matching path, it will return `undefined`. Otherwise, it will return the value of the specified path.
+- `item` - Object/array/string to inspect. If there's no matching path, it will return `undefined`. Otherwise, it will return the value of the specified path.
 
 #### namespace.lens;
 
@@ -130,21 +132,29 @@ Again, if you didn't let `redux-pathspace` know about your store by using `setSt
 
 ### mapNamespacesToObject(obj: object);
 
+- `obj` - A plain object to recursively create a new object that has a namespace for each key in `obj`.
+
 Creates and returns an object (typically your initial state) of the same shape as the one it's passed, with each key in the object being a `namespace`. `mapNamespacesToObject` will recursively walk down your object to create a `namespace` for each key. Keep in mind--if you have any keys in your object that conflict with the keys on the `namespace`, they will be overwritten--so don't use this function if you have any of the following keys within your object: `examine`, `mapActionToReducer`, or `lens`.
 
-If any of the values in the `obj` passed to `mapNamespacesToObject` are arrays, a `namespace` will be created for that key as well, however you will manually need to add new namespaces if you want to target specific indexes of that array. For example:
+#### *Note*: Array values
 
-```js
+If any of the values in the `obj` passed to `mapNamespacesToObject` are arrays, a new function will be created for that key that takes one argument--the array's index you want to target. When called, it returns a `namespace` for that specific index. In addition, all the `namespace` methods/properties are mapped onto the function, so you don't have to target a specific index. You can just use the normal `namespace` methods/properties as you would for non-arrays.
+
+Here is a usage example:
+
+````js
 import { createNamespace, mapNamespacesToObject } from 'redux-pathspace';
 
-const initialState = { myArr: ['foo', 'bar'] };
+const initialState = { someKey: 'someValue', myArr: ['foo', 'bar'] };
 const namespaces = mapNamespacesToObject(initialState);
-namespaces['myArr[1]'] = createNamespace(1, namespaces.myArr);
 
-namespaces['myArr[1]'].examine(initialState); // -> 'bar'
+console.log(typeof namespaces.someKey); // -> 'object'
+console.log(typeof namespaces.myArr); // -> 'function'
+
+namespaces.myArr(1).examine(initialState); // -> bar
+namespaces.myArr(10).examine(initialState); // -> undefined
+
 ```
-
-- `obj` - A plain object to recursively create a new object that has a namespace for each key in `obj`.
 
 ### setStore(store: object[, actionCreators: any]);
 

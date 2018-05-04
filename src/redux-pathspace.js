@@ -6,7 +6,7 @@ import lensIndex from 'ramda/src/lensIndex';
 import isPlainObject from 'lodash.isplainobject';
 
 function createPathspace() {
-  const PREFIX_JOINER = '.';
+  const PATH_JOINER = '.';
   const PREFIX_SEPERATOR = ':';
   const pathStringSymbol = Symbol('@@Pathspace->addPath->path[pathString]');
   const pathLensSymbol = Symbol('@@Pathspace->addPath->path[pathLens]');
@@ -16,9 +16,12 @@ function createPathspace() {
   let _actionCreators;
 
   function getPathPrefix(path) {
-    return Array.isArray(path)
-      ? path.join(PREFIX_JOINER)
-      : path;
+    if (!Array.isArray(path)) return path;
+    return path.reduce((stringified, location) => (
+      typeof location === 'number'
+        ? `${stringified.slice(0, -1)}[${location}].`
+        : `${stringified}${location}.`
+    ), '').slice(0, -1);
   }
 
   function reducerWrapper(lens, reducer) {
@@ -49,7 +52,7 @@ function createPathspace() {
     const isValid = arr.reduce((bool, val) => {
       if (!bool) return false;
       if (typeof val === 'string' || typeof val === 'number') {
-        if (typeof val === 'string') return val.split(PREFIX_JOINER).length === 1;
+        if (typeof val === 'string') return val.split(PATH_JOINER).length === 1;
         return true;
       }
       return false;
@@ -74,7 +77,7 @@ function createPathspace() {
   }
 
   function getNamespaceName(actionType) {
-    const split = actionType.split(PREFIX_SEPERATOR)[0].split(PREFIX_JOINER);
+    const split = actionType.split(PREFIX_SEPERATOR)[0].split(PATH_JOINER);
     return split.length > 1
       ? split
       : split[0];
@@ -93,15 +96,15 @@ function createPathspace() {
         return [...path, ...subPath];
       }
       if (typeof subPath === 'string') {
-        return [...path, ...subPath.split(PREFIX_JOINER)];
+        return [...path, ...subPath.split(PATH_JOINER)];
       }
       return [...path, subPath];
     }
     if (Array.isArray(subPath)) {
-      return `${path}.${subPath.join(PREFIX_JOINER)}`;
+      return `${path}.${subPath.join(PATH_JOINER)}`;
     }
     if (typeof subPath === 'number') {
-      return [...path.split(PREFIX_JOINER), subPath];
+      return [...path.split(PATH_JOINER), subPath];
     }
     return `${path}.${subPath}`;
   }
@@ -115,7 +118,7 @@ function createPathspace() {
 
   function ensurePath(path) {
     if (!Array.isArray(path) && typeof path !== 'number') {
-      const split = path.split(PREFIX_JOINER);
+      const split = path.split(PATH_JOINER);
       if (split.length > 1) return split;
       return split[0];
     }
@@ -210,22 +213,35 @@ function createPathspace() {
 
 const { createNamespace, createReducer, setStore } = createPathspace();
 
-function getKey(prevKey, key) {
-  return `${prevKey}${prevKey ? '.' : ''}${key}`;
+function createArrayNamespace(path) {
+  const _indexNamespaces = [];
+  const namespace = createNamespace(path);
+  function arrayNamespace(index) {
+    if (!_indexNamespaces[index]) _indexNamespaces[index] = createNamespace([...path, index]);
+    return _indexNamespaces[index];
+  }
+  Object.keys(namespace).forEach((key) => {
+    arrayNamespace[key] = namespace[key];
+  });
+  return arrayNamespace;
 }
 
-function mapNamespacesToObject(obj, prevKey = '') {
+function mapNamespacesToObject(obj, prevKey = []) {
   return Object.keys(obj).reduce((cloned, key) => {
+    const path = [...prevKey, key];
     if (isPlainObject(obj[key])) {
       return {
         ...cloned,
         [key]: {
-          ...mapNamespacesToObject(obj[key], getKey(prevKey, key)),
-          ...createNamespace(getKey(prevKey, key)),
+          ...mapNamespacesToObject(obj[key], path),
+          ...createNamespace(path),
         },
       };
     }
-    return { ...cloned, [key]: createNamespace(getKey(prevKey, key)) };
+    if (Array.isArray(obj[key])) {
+      return { ...cloned, [key]: createArrayNamespace(path) };
+    }
+    return { ...cloned, [key]: createNamespace(path) };
   }, {});
 }
 
