@@ -142,7 +142,7 @@ Additionally, `mapNamespaces` will recursively walk down arrays provided and if 
 
 Here is a usage example:
 
-````js
+```js
 import { createNamespace, mapNamespaces } from 'redux-pathspace';
 
 const initialState = { someKey: 'someValue', myArr: ['foo', 'bar'], arrWithObjects: [{ name: 'John' }]};
