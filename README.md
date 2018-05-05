@@ -66,7 +66,7 @@ bazIndex1ActionCreator(); // -> { type: baz[1]:FOO, payload: undefined, meta: {}
 ## API
 
 ```js
-import { createNamespace, createReducer, mapNamespacesToObject, setStore } from 'redux-pathspace';
+import { createNamespace, createReducer, mapNamespaces, setStore } from 'redux-pathspace';
 ```
 
 ### createNamespace(path: string|array|number|func[, parentPath: path]);
@@ -130,23 +130,25 @@ Again, if you didn't let `redux-pathspace` know about your store by using `setSt
 - returns - (function) - A "root" reducer which should get passed to redux's `createStore`.
 
 
-### mapNamespacesToObject(obj: object);
+### mapNamespaces(initialState: object|array|string);
 
 - `obj` - A plain object to recursively create a new object that has a namespace for each key in `obj`.
 
-Creates and returns an object (typically your initial state) of the same shape as the one it's passed, with each key in the object being a `namespace`. `mapNamespacesToObject` will recursively walk down your object to create a `namespace` for each key. Keep in mind--if you have any keys in your object that conflict with the keys on the `namespace`, they will be overwritten--so don't use this function if you have any of the following keys within your object: `examine`, `mapActionToReducer`, or `lens`.
+Creates and returns an object (typically your initial state) of the same shape as the one it's passed, with each key in the object being a `namespace`. `mapNamespaces` will recursively walk down your object to create a `namespace` for each key. Keep in mind--if you have any keys in your object that conflict with the keys on the `namespace`, they will be overwritten--so don't use this function if you have any of the following keys within your object: `examine`, `mapActionToReducer`, or `lens`.
 
 #### *Note*: Array values
 
-If any of the values in the `obj` passed to `mapNamespacesToObject` are arrays, a new function will be created for that key that takes one argument--the array's index you want to target. When called, it returns a `namespace` for that specific index. In addition, all the `namespace` methods/properties are mapped onto the function, so you don't have to target a specific index. You can just use the normal `namespace` methods/properties as you would for non-arrays.
+If any of the values in the `obj` passed to `mapNamespaces` are arrays, a new function will be created for that key that takes one argument--the array's index you want to target. When called, it returns a `namespace` for that specific index. In addition, all the `namespace` methods/properties are mapped onto the function, so you don't have to target a specific index. You can just use the normal `namespace` methods/properties as you would for non-arrays.
+
+Additionally, `mapNamespaces` will recursively walk down arrays provided
 
 Here is a usage example:
 
 ````js
-import { createNamespace, mapNamespacesToObject } from 'redux-pathspace';
+import { createNamespace, mapNamespaces } from 'redux-pathspace';
 
 const initialState = { someKey: 'someValue', myArr: ['foo', 'bar'] };
-const namespaces = mapNamespacesToObject(initialState);
+const namespaces = mapNamespaces(initialState);
 
 console.log(typeof namespaces.someKey); // -> 'object'
 console.log(typeof namespaces.myArr); // -> 'function'
@@ -158,7 +160,7 @@ namespaces.myArr(10).examine(initialState); // -> undefined
 
 ### setStore(store: object[, actionCreators: any]);
 
-This function essentially makes your redux store available to `redux-pathspace`. The motivation for this API method was to make `store.dispatch` available to the function you pass to `withSideEffect` without having to pass it manually each time you create a side-effect that dispatches other actions before updating the state. This gives you the power to focus on small "slices" of the state in your reducers--keeping them simple and pure--while at the same time updating other parts of the state if you need to (by dispatching actions that handle those other parts, thus letting each reducer do its "job" for each part of the state you're concerned with). This way, you can use something like `mapNamespacesToObject` to create namespaces for each part of your state (no matter how deep) and return simple values in your reducers, without worrying about the larger shape of your state...without limiting your ability to affect other parts of the state in a controlled, predictable way.
+This function essentially makes your redux store available to `redux-pathspace`. The motivation for this API method was to make `store.dispatch` available to the function you pass to `withSideEffect` without having to pass it manually each time you create a side-effect that dispatches other actions before updating the state. This gives you the power to focus on small "slices" of the state in your reducers--keeping them simple and pure--while at the same time updating other parts of the state if you need to (by dispatching actions that handle those other parts, thus letting each reducer do its "job" for each part of the state you're concerned with). This way, you can use something like `mapNamespaces` to create namespaces for each part of your state (no matter how deep) and return simple values in your reducers, without worrying about the larger shape of your state...without limiting your ability to affect other parts of the state in a controlled, predictable way.
 
 Optionally, it takes a second argument--an object containing your action creators. This is added for convenience so your action creators can be passed to your side-effects and used with `store.dispatch` without having to `import` or `require` your action creators everywhere you define your side-effects. This will be undefined if you did not pass a second argument to `setStore`.
 
