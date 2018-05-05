@@ -143,10 +143,12 @@ Additionally, `mapNamespaces` will recursively walk down arrays provided and if 
 Here is a usage example:
 
 ```js
-import { createNamespace, mapNamespaces } from 'redux-pathspace';
+import { createNamespace, mapNamespaces, createReducer } from 'redux-pathspace';
+import { createStore } from 'redux';
 
 const initialState = { someKey: 'someValue', myArr: ['foo', 'bar'], arrWithObjects: [{ name: 'John' }]};
 const namespaces = mapNamespaces(initialState);
+const store = createStore(createReducer(initialState), initialState);
 
 console.log(typeof namespaces.someKey); // -> 'object'
 console.log(typeof namespaces.myArr); // -> 'function'
@@ -155,6 +157,11 @@ namespaces.myArr(1).examine(initialState); // -> bar
 namespaces.myArr(10).examine(initialState); // -> undefined
 namespaces.arrWithObjects(0).examine(initialState); // -> { name: 'John' }
 namespaces.arrWithObjects(0).name.examine(initialState); //  -> 'John'
+namespaces.arrWithObjects(42).name.examine(initialState); // -> undefined
+
+const newNameActionCreator = namespaces.arrWithObjects(42).name.mapActionToReducer('NEW_NAME');
+store.dispatch(newNameActionCreator('Lizzie');
+namespaces.arrWithObjects(42).name.examine(store.getState()); // -> 'Lizzie'
 
 ```
 
