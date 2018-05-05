@@ -66,7 +66,7 @@ bazIndex1ActionCreator(); // -> { type: baz[1]:FOO, payload: undefined, meta: {}
 ## API
 
 ```js
-import { createNamespace, createReducer, mapNamespaces, setStore } from 'redux-pathspace';
+import { createNamespace, createReducer, mapNamespaces, setStore, createPathspace } from 'redux-pathspace';
 ```
 
 ### createNamespace(path: string|array|number|func[, parentPath: path]);
@@ -132,22 +132,20 @@ Again, if you didn't let `redux-pathspace` know about your store by using `setSt
 
 ### mapNamespaces(initialState: object|array|string);
 
-- `obj` - A plain object to recursively create a new object that has a namespace for each key in `obj`.
-
-Creates and returns an object (typically your initial state) of the same shape as the one it's passed, with each key in the object being a `namespace`. `mapNamespaces` will recursively walk down your object to create a `namespace` for each key. Keep in mind--if you have any keys in your object that conflict with the keys on the `namespace`, they will be overwritten--so don't use this function if you have any of the following keys within your object: `examine`, `mapActionToReducer`, or `lens`.
+- `initialState` - If an object, will deeply map namespaces to each key in your object. If an array, will deeply traverse your array and create a namespace for each index (see more on arrays below). If a string, will create a namespace for each index in the string.
 
 #### *Note*: Array values
 
-If any of the values in the `obj` passed to `mapNamespaces` are arrays, a new function will be created for that key that takes one argument--the array's index you want to target. When called, it returns a `namespace` for that specific index. In addition, all the `namespace` methods/properties are mapped onto the function, so you don't have to target a specific index. You can just use the normal `namespace` methods/properties as you would for non-arrays.
+If any of the values in the `initialState` passed to `mapNamespaces` are arrays (or just plain array itself), a new function will be created for that key that takes one argument--the array's index you want to target. When called, it returns a `namespace` for that specific index. In addition, all the `namespace` methods/properties are mapped onto the function, so you don't have to target a specific index. You can just use the normal `namespace` methods/properties as you would for non-arrays.
 
-Additionally, `mapNamespaces` will recursively walk down arrays provided
+Additionally, `mapNamespaces` will recursively walk down arrays provided and if an object is found, it will assume all objects within that array will have the same shape, and create a namespace for any index in that array that matches that shape. If it finds other arrays nested within your array, it will map those arrays (and nested objects) as well.
 
 Here is a usage example:
 
 ````js
 import { createNamespace, mapNamespaces } from 'redux-pathspace';
 
-const initialState = { someKey: 'someValue', myArr: ['foo', 'bar'] };
+const initialState = { someKey: 'someValue', myArr: ['foo', 'bar'], arrWithObjects: [{ name: 'John' }]};
 const namespaces = mapNamespaces(initialState);
 
 console.log(typeof namespaces.someKey); // -> 'object'
@@ -155,6 +153,8 @@ console.log(typeof namespaces.myArr); // -> 'function'
 
 namespaces.myArr(1).examine(initialState); // -> bar
 namespaces.myArr(10).examine(initialState); // -> undefined
+namespaces.arrWithObjects(0).examine(initialState); // -> { name: 'John' }
+namespaces.arrWithObjects(0).name.examine(initialState); //  -> 'John'
 
 ```
 
@@ -177,6 +177,12 @@ const initialState = { foo: 'bar', baz: [] };
 
 export const store = setStore(createStore(createReducer(initialState), initialState), actionCreators);
 ```
+
+### createPathspace();
+
+The `redux-pathspace` module automatically calls `createPathspace()` which creates a closure and exports all of the above API methods. If, however, you need to create that closure yourself, you can use this method instead of the exported methods.
+
+This method is typically useful for when you're doing hot module reloading (HMR), which in some cases can call your namespace creators (via `createNamespace` or `mapNamespaces`), which will throw an error. With `createPathspace`, you can ensure you get a fresh closure so your namespace creators re-create your namespaces successfully on HMR.
 
 ## Install
 

@@ -21,8 +21,13 @@ tape('redux-pathspace', (t) => {
 
   t.test('mapNamespaces', (tt) => {
     const { mapNamespaces, createReducer } = createPathspace();
-    const { mapNamespaces: mapNamespacesArray, createReducer: createArrReducer } = createPathspace();
-    const { mapNamespaces: mapNamespacesString, createReducer: createStringReducer } = createPathspace();
+    const {
+      mapNamespaces: mapNamespacesArray, createReducer: createArrReducer,
+    } = createPathspace();
+    const {
+      mapNamespaces: mapNamespacesString, createReducer: createStringReducer,
+    } = createPathspace();
+    const { mapNamespaces: mapNamespacesThrow } = createPathspace();
     const { createStore } = require('redux');
 
     const initialState = {
@@ -120,6 +125,9 @@ tape('redux-pathspace', (t) => {
 
     tt.equal(mappedString(3).examine(stringStore.getState()), 'T', 'properly reduces state for mapped arrays');
     tt.equal(mappedString.examine(stringStore.getState()), 'fooTar', 'properly reduces state for mapped arrays');
+
+    tt.throws(() => mapNamespacesThrow(0), 'throws when called with a non-object/array/string');
+    tt.throws(() => mapNamespacesThrow(() => {}), 'throws when called with a non-object/array/string');
     tt.end();
   });
 
