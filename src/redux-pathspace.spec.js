@@ -1,64 +1,156 @@
 /* eslint global-require: 0 */
 
 const tape = require('tape');
+const { createPathspace } = require('../dist/redux-pathspace');
 
 function isFunction(f) {
   return [typeof f, 'function'];
 }
 
 tape('redux-pathspace', (t) => {
-  const { createNamespace, createReducer, setStore, mapNamespacesToObject } = require('../dist/redux-pathspace');
-
   t.test('properly exports api methods', (tt) => {
+    const { createNamespace, createReducer, setStore, mapNamespaces } = createPathspace();
+
     tt.equal(...isFunction(createNamespace), 'exports a `createNamespace` function');
     tt.equal(...isFunction(createReducer), 'exports a `createReducer` function');
     tt.equal(...isFunction(setStore), 'exports a `setStore` function');
-    tt.equal(...isFunction(mapNamespacesToObject), 'exports a `mapNamespacesToObject` function');
+    tt.equal(...isFunction(mapNamespaces), 'exports a `mapNamespaces` function');
+    tt.equal(...isFunction(createPathspace), 'exports a `mapNamespaces` function');
     tt.end();
   });
 
-  t.test('mapNamespacesToObject', (tt) => {
+  t.test('mapNamespaces', (tt) => {
+    const { mapNamespaces, createReducer } = createPathspace();
+    const {
+      mapNamespaces: mapNamespacesArray, createReducer: createArrReducer,
+    } = createPathspace();
+    const {
+      mapNamespaces: mapNamespacesString, createReducer: createStringReducer,
+    } = createPathspace();
+    const { mapNamespaces: mapNamespacesThrow } = createPathspace();
+    const { createStore } = require('redux');
+
     const initialState = {
-      fooo: {
+      foo: {
         bar: [1, 2, 3, 4],
         baz: {
           zab: undefined,
         },
+        bing: [{
+          name: 'hello',
+        }],
+        bang: [[{
+          boom: 'zing',
+          zoom: [{
+            zing: 'nested',
+          }],
+        }]],
       },
     };
 
-    const mapped = mapNamespacesToObject(initialState);
+    const initialStateArray = [{
+      foo: 'bar',
+    }];
 
-    tt.equal(...isFunction(mapped.fooo.examine), 'properly maps namespaces');
-    tt.equal(...isFunction(mapped.fooo.bar.examine), 'properly maps namespaces');
-    tt.equal(...isFunction(mapped.fooo.baz.examine), 'properly maps namespaces');
-    tt.equal(...isFunction(mapped.fooo.baz.zab.examine), 'properly maps namespaces');
-    tt.equal(...isFunction(mapped.fooo.bar), 'creates a function for array paths');
-    tt.equal(mapped.fooo.bar(2).examine(initialState), 3, 'properly handles array indexes');
+    const initialStateString = 'fooBar';
 
-    const secondIndexActionCreator = mapped.fooo.bar(2).mapActionToReducer('FOO');
+    const mapped = mapNamespaces(initialState);
+    const mappedArray = mapNamespacesArray(initialStateArray);
+    const mappedString = mapNamespacesString(initialStateString);
 
-    tt.equal(secondIndexActionCreator().type, 'fooo.bar[2]:FOO', 'properly handles actions');
-    tt.throws(() => mapped.fooo.bar(2).mapActionToReducer('FOO'), 'throws when duplicate actions created');
+    tt.equal(...isFunction(mapped.foo.examine), 'properly maps namespaces');
+    tt.equal(...isFunction(mapped.foo.bar.examine), 'properly maps namespaces');
+    tt.equal(...isFunction(mapped.foo.baz.examine), 'properly maps namespaces');
+    tt.equal(...isFunction(mapped.foo.baz.zab.examine), 'properly maps namespaces');
+    tt.equal(...isFunction(mapped.foo.bar), 'creates a function for array paths');
+    tt.deepEqual(mapped.foo.bar.examine(initialState), [1, 2, 3, 4], 'properly handles array indexes');
+    tt.equal(mapped.foo.bar(2).examine(initialState), 3, 'properly handles array indexes');
+    tt.equal(mapped.foo.bing(0).name.examine(initialState), 'hello', 'properly maps array item shapes');
+    tt.deepEqual(mapped.foo.bing(0).examine(initialState), { name: 'hello' }, 'properly maps array item shapes');
+    tt.equal(mapped.foo.bang(0)(0).boom.examine(initialState), 'zing', 'properly handles nested array shapes');
+    tt.deepEqual(mapped.foo.bang(0).examine(initialState), initialState.foo.bang[0], 'properly handles nested array shapes');
+
+    const zoom = mapped.foo.bang(0)(0).zoom(0);
+
+    tt.deepEqual(zoom.examine(initialState), initialState.foo.bang[0][0].zoom[0], 'properly handles nested array shapes');
+    tt.equal(zoom.zing.examine(initialState), 'nested', 'properly handles nested array shapes');
+
+    const secondIndexActionCreator = mapped.foo.bar(2).mapActionToReducer('FOO');
+    const superLongActionCreator = zoom.zing.mapActionToReducer('SET');
+    const randomIndexActionCreator = mapped.foo.bar(42).mapActionToReducer('FOO');
+
+    tt.deepEqual(secondIndexActionCreator('foo'), { type: 'foo.bar[2]:FOO', payload: 'foo', meta: {} }, 'properly handles actions');
+    tt.throws(() => mapped.foo.bar(2).mapActionToReducer('FOO'), 'throws when duplicate actions created');
+    tt.deepEqual(superLongActionCreator('foo'), { type: 'foo.bang[0][0].zoom[0].zing:SET', payload: 'foo', meta: {} }, 'properly handles deeply nested namespace actions');
+
+    const store = createStore(createReducer(initialState), initialState);
+    store.dispatch(superLongActionCreator('super long!'));
+    store.dispatch(randomIndexActionCreator('hello'));
+
+    tt.equal(zoom.zing.examine(store.getState()), 'super long!', 'properly reduces actions to the store');
+    tt.equal(mapped.foo.bar(42).examine(store.getState()), 'hello', 'properly reduces actions to the store');
+    tt.equal(mapped.foo.bar(37).examine(store.getState()), undefined, 'properly reduces actions to the store');
+
+    tt.equal(...isFunction(mappedArray.examine), 'properly maps arrays');
+    tt.equal(...isFunction(mappedArray(0).examine), 'properly maps arrays');
+    tt.equal(...isFunction(mappedArray(0).foo.examine), 'properly maps arrays');
+    tt.deepEqual(mappedArray.examine(initialStateArray), initialStateArray, 'properly maps arrays');
+    tt.deepEqual(mappedArray(0).examine(initialStateArray), initialStateArray[0], 'properly maps arrays');
+    tt.equal(mappedArray(0).foo.examine(initialStateArray), initialStateArray[0].foo, 'properly maps arrays');
+    tt.deepEqual(mappedArray.mapActionToReducer('SET')('foo'), { type: 'SET', payload: 'foo', meta: {} }, 'properly creats actions for mapped arrays');
+    tt.deepEqual(mappedArray(0).mapActionToReducer('SET')('foo'), { type: '[0]:SET', payload: 'foo', meta: {} }, 'properly creats actions for mapped arrays');
+    tt.deepEqual(mappedArray(0).foo.mapActionToReducer('SET')('foo'), { type: '[0].foo:SET', payload: 'foo', meta: {} }, 'properly creats actions for mapped arrays');
+
+    const arrayStore = createStore(createArrReducer(initialStateArray), initialStateArray);
+    const mappedArrFooActionCreator = mappedArray(0).foo.mapActionToReducer('YO');
+    arrayStore.dispatch(mappedArrFooActionCreator('yo!'));
+
+    tt.equal(mappedArray(0).foo.examine(arrayStore.getState()), 'yo!', 'properly reduces state for mapped arrays');
+
+    tt.equal(...isFunction(mappedString.examine), 'properly maps strings');
+    tt.equal(...isFunction(mappedString(0).examine), 'properly maps strings');
+    tt.equal(...isFunction(mappedString(1).examine), 'properly maps strings');
+    tt.equal(...isFunction(mappedString(2).examine), 'properly maps strings');
+    tt.equal(mappedString.examine(initialStateString), initialStateString, 'properly maps strings');
+    tt.equal(mappedString(0).examine(initialStateString), initialStateString[0], 'properly maps strings');
+    tt.equal(mappedString(1).examine(initialStateString), initialStateString[1], 'properly maps strings');
+    tt.equal(mappedString(2).examine(initialStateString), initialStateString[1], 'properly maps strings');
+    tt.deepEqual(mappedString.mapActionToReducer('SET')('foo'), { type: 'SET', payload: 'foo', meta: {} }, 'properly creats actions for mapped strings');
+    tt.deepEqual(mappedString(0).mapActionToReducer('SET')('foo'), { type: '[0]:SET', payload: 'foo', meta: {} }, 'properly creats actions for mapped strings');
+    tt.deepEqual(mappedString(1).mapActionToReducer('SET')('foo'), { type: '[1]:SET', payload: 'foo', meta: {} }, 'properly creats actions for mapped strings');
+
+    const stringStore = createStore(createStringReducer(initialStateString), initialStateString);
+    const mappedStringActionCreator = mappedString(3).mapActionToReducer('SET');
+    stringStore.dispatch(mappedStringActionCreator('T'));
+
+    tt.equal(mappedString(3).examine(stringStore.getState()), 'T', 'properly reduces state for mapped arrays');
+    tt.equal(mappedString.examine(stringStore.getState()), 'fooTar', 'properly reduces state for mapped arrays');
+
+    tt.throws(() => mapNamespacesThrow(0), 'throws when called with a non-object/array/string');
+    tt.throws(() => mapNamespacesThrow(() => {}), 'throws when called with a non-object/array/string');
     tt.end();
   });
 
   t.test('setStore', (tt) => {
+    const { createNamespace, createReducer, setStore } = createPathspace();
+
     const { createStore } = require('redux');
-    const initialState = { foooo: 'bar', bazzzz: 'zab' };
-    const foo = createNamespace('foooo');
-    const baz = createNamespace('bazzzz');
+    const initialState = { foo: 'bar', baz: 'zab' };
+    const foo = createNamespace('foo');
+    const baz = createNamespace('baz');
     const bazActionCreator = baz.mapActionToReducer('SET', () => 'changed');
     const fooActionCreator = foo.mapActionToReducer('CHANGE_BAZ_TOO')
       .withSideEffect(({ dispatch }, ax) => () => { dispatch(ax.bazActionCreator()); return 'hello'; });
     const actionCreators = { bazActionCreator, fooActionCreator };
     const store = setStore(createStore(createReducer(initialState), initialState), actionCreators);
     store.dispatch(fooActionCreator());
-    tt.equal(store.getState().bazzzz, 'changed', 'properly sets store and action creators so dispatch/ation creators can be passed to side effects');
+    tt.equal(store.getState().baz, 'changed', 'properly sets store and action creators so dispatch/ation creators can be passed to side effects');
     tt.end();
   });
 
   t.test('createNamespace', (tt) => {
+    const { createNamespace, createReducer } = createPathspace();
+
     tt.doesNotThrow(() => createNamespace('foo'), 'accepts a string');
     tt.doesNotThrow(() => createNamespace('foo.bar.baz'), 'accepts a stringed path representation');
     tt.doesNotThrow(() => createNamespace(['foo', 2]), 'accepts an array of strings or numbers');
@@ -151,6 +243,8 @@ tape('redux-pathspace', (t) => {
   });
 
   t.test('createReducer', (tt) => {
+    const { createNamespace, createReducer } = createPathspace();
+
     tt.doesNotThrow(() => createReducer(0), 'accepts any type');
     tt.equal(...isFunction(createReducer()), 'returns a function');
 

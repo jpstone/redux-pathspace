@@ -3,8 +3,8 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.mapNamespacesToObject = mapNamespacesToObject;
-exports.setStore = exports.createReducer = exports.createNamespace = void 0;
+exports.createPathspace = createPathspace;
+exports.mapNamespaces = exports.setStore = exports.createReducer = exports.createNamespace = void 0;
 
 var _set = _interopRequireDefault(require("ramda/src/set"));
 
@@ -37,8 +37,8 @@ function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterat
 function createPathspace() {
   var PATH_JOINER = '.';
   var PREFIX_SEPERATOR = ':';
-  var pathStringSymbol = Symbol('@@Pathspace->addPath->path[pathString]');
-  var pathLensSymbol = Symbol('@@Pathspace->addPath->path[pathLens]');
+  var pathStringSymbol = Symbol('@@Pathspace->createNamespace->path[pathString]');
+  var pathLensSymbol = Symbol('@@Pathspace->createNamespace->path[pathLens]');
 
   var _namespaces = new Map();
 
@@ -97,7 +97,7 @@ function createPathspace() {
   }
 
   function getActionName(path, actionName) {
-    return "".concat(getPathPrefix(path)).concat(PREFIX_SEPERATOR).concat(actionName);
+    return !path.length ? actionName : "".concat(getPathPrefix(path)).concat(PREFIX_SEPERATOR).concat(actionName);
   }
 
   function defaultReducer(state, payload) {
@@ -147,10 +147,10 @@ function createPathspace() {
   }
 
   function validatePath(path, parentPath) {
-    if (typeof path !== 'number' && !path) throw new Error('No path was provided to "addPath" function, which is required');
-    if (typeof path !== 'string' && !Array.isArray(path) && typeof path !== 'number') throw new Error('The path provided to "addPath" function must be a string or array');
-    if (parentPath && !(parentPath[pathStringSymbol] && parentPath[pathLensSymbol])) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "addPath"');
-    if (Array.isArray(path) && !checkPathArray(path)) throw new Error('When using an array to "addPath", only strings and numbers are permitted');
+    if (typeof path !== 'number' && !path) throw new Error('No path was provided to "createNamespace" function, which is required');
+    if (typeof path !== 'string' && !Array.isArray(path) && typeof path !== 'number') throw new Error('The path provided to "createNamespace" function must be a string or array');
+    if (parentPath && !(parentPath[pathStringSymbol] && parentPath[pathLensSymbol])) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "createNamespace"');
+    if (Array.isArray(path) && !checkPathArray(path)) throw new Error('When using an array to "createNamespace", only strings and numbers are permitted');
   }
 
   function ensurePath(path) {
@@ -178,7 +178,7 @@ function createPathspace() {
     var lens = createLens(ensurePath(path), parentPath);
     var pathString = parentPath ? getSubPath(parentPath[pathStringSymbol], path) : path;
     var prefix = getPathPrefix(pathString);
-    if (_namespaces.has(prefix)) throw new Error("The path \"".concat(pathString, "\" already exists"));
+    if (_namespaces.has(prefix)) throw new Error("The path \"".concat(prefix, "\" already exists"));
 
     _namespaces.set(prefix, createActionContainer(lens));
 
@@ -250,50 +250,92 @@ function createPathspace() {
     return _store;
   }
 
+  function createArrayNamespace(path, nested, mapper, isString) {
+    var namespace = createNamespace(path);
+    var _indexNamespaces = [];
+
+    function arrayNamespace(index) {
+      if (!_indexNamespaces[index]) {
+        _indexNamespaces[index] = mapper(nested, _toConsumableArray(path).concat([index]));
+      }
+
+      return _indexNamespaces[index];
+    }
+
+    Object.keys(namespace).forEach(function (key) {
+      arrayNamespace[key] = namespace[key];
+    });
+
+    if (isString) {
+      arrayNamespace.examine = function (data) {
+        return Object.keys(data).reduce(function (str, key) {
+          return "".concat(str).concat(data[key]);
+        }, '');
+      };
+    }
+
+    return arrayNamespace;
+  }
+
+  function mapNamespacesToTarget(target) {
+    var prevKey = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
+
+    if (Array.isArray(target) || typeof target === 'string') {
+      var nested;
+      var isString;
+
+      if (Array.isArray(target)) {
+        nested = target.find(function (val) {
+          return Array.isArray(val) || (0, _lodash.default)(val);
+        });
+      }
+
+      if (typeof target === 'string') isString = true;
+      return createArrayNamespace(prevKey, nested, mapNamespacesToTarget, isString);
+    }
+
+    if ((0, _lodash.default)(target)) {
+      return Object.keys(target).reduce(function (cloned, key) {
+        var path = _toConsumableArray(prevKey).concat([key]);
+
+        if ((0, _lodash.default)(target[key])) {
+          return _objectSpread({}, cloned, _defineProperty({}, key, mapNamespacesToTarget(target[key], path)));
+        }
+
+        if (Array.isArray(target[key])) {
+          return _objectSpread({}, cloned, _defineProperty({}, key, mapNamespacesToTarget(target[key], path)));
+        }
+
+        return _objectSpread({}, cloned, _defineProperty({}, key, createNamespace(path)));
+      }, createNamespace(prevKey));
+    }
+
+    return createNamespace(prevKey);
+  }
+
+  function mapNamespaces(target) {
+    if (!Array.isArray(target) && !(0, _lodash.default)(target) && typeof target !== 'string') {
+      throw new TypeError("mapNamespaces only maps namespaces to arrays and objects. Instead you provided ".concat(target, ", which is of type ").concat(_typeof(target)));
+    }
+
+    return mapNamespacesToTarget(target);
+  }
+
   return {
     createNamespace: createNamespace,
     createReducer: createReducer,
-    setStore: setStore
+    setStore: setStore,
+    mapNamespaces: mapNamespaces
   };
 }
 
 var _createPathspace = createPathspace(),
     createNamespace = _createPathspace.createNamespace,
     createReducer = _createPathspace.createReducer,
-    setStore = _createPathspace.setStore;
+    setStore = _createPathspace.setStore,
+    mapNamespaces = _createPathspace.mapNamespaces;
 
+exports.mapNamespaces = mapNamespaces;
 exports.setStore = setStore;
 exports.createReducer = createReducer;
 exports.createNamespace = createNamespace;
-
-function createArrayNamespace(path) {
-  var _indexNamespaces = [];
-  var namespace = createNamespace(path);
-
-  function arrayNamespace(index) {
-    if (!_indexNamespaces[index]) _indexNamespaces[index] = createNamespace(_toConsumableArray(path).concat([index]));
-    return _indexNamespaces[index];
-  }
-
-  Object.keys(namespace).forEach(function (key) {
-    arrayNamespace[key] = namespace[key];
-  });
-  return arrayNamespace;
-}
-
-function mapNamespacesToObject(obj) {
-  var prevKey = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : [];
-  return Object.keys(obj).reduce(function (cloned, key) {
-    var path = _toConsumableArray(prevKey).concat([key]);
-
-    if ((0, _lodash.default)(obj[key])) {
-      return _objectSpread({}, cloned, _defineProperty({}, key, _objectSpread({}, mapNamespacesToObject(obj[key], path), createNamespace(path))));
-    }
-
-    if (Array.isArray(obj[key])) {
-      return _objectSpread({}, cloned, _defineProperty({}, key, createArrayNamespace(path)));
-    }
-
-    return _objectSpread({}, cloned, _defineProperty({}, key, createNamespace(path)));
-  }, {});
-}
