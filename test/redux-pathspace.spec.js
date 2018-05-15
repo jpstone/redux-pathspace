@@ -1,6 +1,7 @@
 /* eslint global-require: 0 */
 
 const tape = require('tape');
+const { createStore, applyMiddleware } = require('redux');
 const { createPathspace } = require('../dist/redux-pathspace');
 
 function isFunction(f) {
@@ -9,13 +10,10 @@ function isFunction(f) {
 
 tape('redux-pathspace', (t) => {
   t.test('properly exports api methods', (tt) => {
-    const { createNamespace, createReducer, setStore, mapNamespaces } = createPathspace();
+    const { createNamespace, namespaces } = createStore(undefined, [], createPathspace());
 
+    tt.equal(...isFunction(createPathspace), 'exports a `createPathspace` function');
     tt.equal(...isFunction(createNamespace), 'exports a `createNamespace` function');
-    tt.equal(...isFunction(createReducer), 'exports a `createReducer` function');
-    tt.equal(...isFunction(setStore), 'exports a `setStore` function');
-    tt.equal(...isFunction(mapNamespaces), 'exports a `mapNamespaces` function');
-    tt.equal(...isFunction(createPathspace), 'exports a `mapNamespaces` function');
     tt.end();
   });
 
@@ -180,7 +178,7 @@ tape('redux-pathspace', (t) => {
     tt.test('namespace', (ttt) => {
       const namespace = createNamespace('x');
 
-      ttt.equal(3, Object.keys(namespace).length, 'returns an object with 3 properties');
+      ttt.equal(4, Object.keys(namespace).length, 'returns an object with 4 properties');
       ttt.equal(...isFunction(namespace.mapActionToReducer), 'returns a `mapActionToReducer` function');
       ttt.equal(...isFunction(namespace.examine), 'returns a `examine` function');
       ttt.equal(...isFunction(namespace.examine), 'provides a function');
