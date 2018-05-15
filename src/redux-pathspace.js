@@ -3,25 +3,30 @@ import view from 'ramda/src/view';
 import lensPath from 'ramda/src/lensPath';
 import lensProp from 'ramda/src/lensProp';
 import lensIndex from 'ramda/src/lensIndex';
-import isPlainObject from 'lodash.isplainobject';
+
+const throwNewErr = x => { throw new Error(`The action "${x}" already exists for this path`); };
 
 function createPathspace() {
   const PATH_JOINER = '.';
   const PREFIX_SEPERATOR = ':';
   const pathStringSymbol = Symbol('@@Pathspace->createNamespace->path[pathString]');
-  const pathLensSymbol = Symbol('@@Pathspace->createNamespace->path[pathLens]');
 
-  const _namespaces = new Map();
-  let _store;
-  let _actionCreators;
+  // stateful closure variables that power redux-pathspace
+  let store;
+  const namespaces = new Map();
+
+  function isAcceptableObject(obj) {
+    return !Array.isArray(obj) && typeof obj !== 'object';
+  }
 
   function getPathPrefix(path) {
-    if (!Array.isArray(path)) return path;
-    return path.reduce((stringified, location) => (
-      typeof location === 'number'
-        ? `${stringified.slice(0, -1)}[${location}].`
-        : `${stringified}${location}.`
-    ), '').slice(0, -1);
+    return Array.isArray(path) ? (
+      path.reduce((stringified, location) => (
+        typeof location === 'number'
+          ? `${stringified.slice(0, -1)}[${location}].`
+          : `${stringified}${location}.`
+      ), '').slice(0, -1)
+    ) : path;
   }
 
   function reducerWrapper(lens, reducer) {
@@ -32,42 +37,38 @@ function createPathspace() {
     };
   }
 
+
   function createActionContainer(lens) {
-    const _actions = new Map();
-    return {
+    const actions = new Map();
+    return ({
       set(actionName, reducer) {
-        if (_actions.has(actionName)) throw new Error(`The action "${actionName}" already exists for this path`);
-        return _actions.set(actionName, reducerWrapper(lens, reducer));
+        return !actions.has(actionName)
+          ? throwNewErr(actionName)
+          : actions.set(actionName, reducerWrapper(lens, reducer));
       },
-      get(actionName) {
-        return _actions.get(actionName);
-      },
-      has(actionName) {
-        return _actions.has(actionName);
-      },
-    };
+      get: actions.get,
+      has: actions.has,
+    });
   }
 
   function checkPathArray(arr) {
-    const isValid = arr.reduce((bool, val) => {
-      if (!bool) return false;
-      if (typeof val === 'string' || typeof val === 'number') {
-        if (typeof val === 'string') return val.split(PATH_JOINER).length === 1;
-        return true;
-      }
-      return false;
-    }, true);
-    return isValid;
+    return arr.reduce((bool, val) => (
+      bool ? (
+        typeof val === 'string'
+          ? val.split(PATH_JOINER).length === 1
+          : typeof val === 'number'
+      ) : false
+    ), true);
   }
 
   function getNamespace(path) {
-    return _namespaces.get(getPathPrefix(path));
+    return namespaces.get(getPathPrefix(path));
   }
 
   function getActionName(path, actionName) {
-    return !path.length
-      ? actionName
-      : `${getPathPrefix(path)}${PREFIX_SEPERATOR}${actionName}`;
+    return path.length
+      ? `${getPathPrefix(path)}${PREFIX_SEPERATOR}${actionName}`
+      : actionName;
   }
 
   function defaultReducer(state, payload) {
@@ -114,17 +115,15 @@ function createPathspace() {
   function validatePath(path, parentPath) {
     if (typeof path !== 'number' && !path) throw new Error('No path was provided to "createNamespace" function, which is required');
     if (typeof path !== 'string' && !Array.isArray(path) && typeof path !== 'number') throw new Error('The path provided to "createNamespace" function must be a string or array');
-    if (parentPath && !(parentPath[pathStringSymbol] && parentPath[pathLensSymbol])) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "createNamespace"');
+    if (parentPath && !(parentPath[pathStringSymbol] && parentPath.lens)) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "createNamespace"');
     if (Array.isArray(path) && !checkPathArray(path)) throw new Error('When using an array to "createNamespace", only strings and numbers are permitted');
   }
 
   function ensurePath(path) {
-    if (!Array.isArray(path) && typeof path !== 'number') {
-      const split = path.split(PATH_JOINER);
-      if (split.length > 1) return split;
-      return split[0];
-    }
-    return path;
+    if (Array.isArray(path) && typeof path === 'number') return path;
+    const split = path.split(PATH_JOINER);
+    if (split.length > 1) return split;
+    return split[0];
   }
 
   function createLens(path, parentPath) {
@@ -133,7 +132,7 @@ function createPathspace() {
     if (typeof path === 'number') lens = lensIndex(path);
     if (typeof path === 'string') lens = lensProp(path);
     return parentPath
-      ? x => parentPath[pathLensSymbol](lens(x))
+      ? x => parentPath.lens(lens(x))
       : lens;
   }
 
@@ -142,13 +141,14 @@ function createPathspace() {
     const lens = createLens(ensurePath(path), parentPath);
     const pathString = parentPath ? getSubPath(parentPath[pathStringSymbol], path) : path;
     const prefix = getPathPrefix(pathString);
-    if (_namespaces.has(prefix)) throw new Error(`The path "${prefix}" already exists`);
-    _namespaces.set(prefix, createActionContainer(lens));
+    if (namespaces.has(prefix)) throw new Error(`The path "${prefix}" already exists`);
+    namespaces.set(prefix, createActionContainer(lens));
     return { lens, prefix };
   }
 
   function createNamespace(p, parentPath) {
     const { lens, prefix } = setNamespace(p, parentPath);
+    const actionCreators = {};
 
     function mapActionToReducer(actionType, reducer = defaultReducer, meta = {}) {
       validateAddActionArgs(actionType, reducer, meta);
@@ -158,10 +158,16 @@ function createPathspace() {
 
       getNamespace(prefix).set(type, reducer);
 
+      function launchSideEffect(...args) {
+        const sideEffect = _createSideEffect(store, actionCreators);
+        const sideEffectResult = sideEffect(...args);
+        return sideEffectResult || args[0];
+      }
+
       function actionCreator(...args) {
         return {
           type,
-          payload: _createSideEffect(_store, _actionCreators)(...args),
+          payload: launchSideEffect(...args),
           meta,
         };
       }
@@ -173,15 +179,18 @@ function createPathspace() {
       }
 
       actionCreator.withSideEffect = withSideEffect;
+      actionCreators[actionType] = actionCreator;
 
       return actionCreator;
     }
 
+    mapActionToReducer('DEFAULT');
+
     return {
-      mapActionToReducer,
-      examine: view(lens),
       [pathStringSymbol]: prefix,
-      [pathLensSymbol]: lens,
+      examine: view(lens),
+      mapActionToReducer,
+      actionCreators,
       lens,
     };
   }
@@ -200,10 +209,9 @@ function createPathspace() {
     };
   }
 
-  function setStore(store, actionCreators) {
-    _store = store;
-    _actionCreators = actionCreators;
-    return _store;
+  function setStore(_store) {
+    store = _store;
+    return store;
   }
 
   function createArrayNamespace(path, nested, mapper, isString) {
@@ -231,16 +239,16 @@ function createPathspace() {
       let nested;
       let isString;
       if (Array.isArray(target)) {
-        nested = target.find(val => Array.isArray(val) || isPlainObject(val));
+        nested = target.find(val => Array.isArray(val) || isAcceptableObject(val));
       }
       if (typeof target === 'string') isString = true;
       return createArrayNamespace(prevKey, nested, mapNamespacesToTarget, isString);
     }
 
-    if (isPlainObject(target)) {
+    if (isAcceptableObject(target)) {
       return Object.keys(target).reduce((cloned, key) => {
         const path = [...prevKey, key];
-        if (isPlainObject(target[key])) {
+        if (isAcceptableObject(target[key])) {
           return {
             ...cloned,
             [key]: mapNamespacesToTarget(target[key], path),
@@ -256,7 +264,7 @@ function createPathspace() {
   }
 
   function mapNamespaces(target) {
-    if (!Array.isArray(target) && !isPlainObject(target) && typeof target !== 'string') {
+    if (!Array.isArray(target) && !isAcceptableObject(target) && typeof target !== 'string') {
       throw new TypeError(`mapNamespaces only maps namespaces to arrays and objects. Instead you provided ${target}, which is of type ${typeof target}`);
     }
     return mapNamespacesToTarget(target);
