@@ -3,17 +3,20 @@ import view from 'ramda/src/view';
 import lensPath from 'ramda/src/lensPath';
 import lensProp from 'ramda/src/lensProp';
 import lensIndex from 'ramda/src/lensIndex';
-import isPlainObject from 'lodash.isplainobject';
+import * as reducers from './reducers';
 
-function createPathspace() {
+function createPathspace(initialState) {
   const PATH_JOINER = '.';
   const PREFIX_SEPERATOR = ':';
   const pathStringSymbol = Symbol('@@Pathspace->createNamespace->path[pathString]');
-  const pathLensSymbol = Symbol('@@Pathspace->createNamespace->path[pathLens]');
 
   const _namespaces = new Map();
   let _store;
   let _actionCreators;
+
+  function isPlainObject(obj) {
+    return !Array.isArray(obj) && typeof obj === 'object';
+  }
 
   function getPathPrefix(path) {
     if (!Array.isArray(path)) return path;
@@ -24,20 +27,20 @@ function createPathspace() {
     ), '').slice(0, -1);
   }
 
-  function reducerWrapper(lens, reducer) {
+  function reducerWrapper(lens, _reducer) {
     const getter = view(lens);
     const setter = set(lens);
     return function wrappedReducer(state, payload) {
-      return setter(reducer(getter(state), payload, state), state);
+      return setter(_reducer(getter(state), payload, state), state);
     };
   }
 
   function createActionContainer(lens) {
     const _actions = new Map();
     return {
-      set(actionName, reducer) {
+      set(actionName, _reducer) {
         if (_actions.has(actionName)) throw new Error(`The action "${actionName}" already exists for this path`);
-        return _actions.set(actionName, reducerWrapper(lens, reducer));
+        return _actions.set(actionName, reducerWrapper(lens, _reducer));
       },
       get(actionName) {
         return _actions.get(actionName);
@@ -74,10 +77,6 @@ function createPathspace() {
     return payload;
   }
 
-  function createNoSideEffect() {
-    return payload => payload;
-  }
-
   function getNamespaceName(actionType) {
     const split = actionType.split(PREFIX_SEPERATOR)[0].split(PATH_JOINER);
     return split.length > 1
@@ -85,8 +84,8 @@ function createPathspace() {
       : split[0];
   }
 
-  function validateAddActionArgs(actionType, reducer, meta) {
-    if (typeof reducer !== 'function') throw new Error('The "reducer" property passed to "addAction" must be a function');
+  function validateAddActionArgs(actionType, _reducer, meta) {
+    if (typeof _reducer !== 'function') throw new Error('The "reducer" property passed to "addAction" must be a function');
     if (typeof meta !== 'object') throw new Error('The "meta" property passed to "addAction" must be a plain object');
     if (Array.isArray(meta)) throw new Error('The "meta" property passed to "addAction" must be a plain object');
     if (typeof actionType !== 'string') throw new Error('The "actionType" property passed to "addAction" must be a string');
@@ -114,7 +113,7 @@ function createPathspace() {
   function validatePath(path, parentPath) {
     if (typeof path !== 'number' && !path) throw new Error('No path was provided to "createNamespace" function, which is required');
     if (typeof path !== 'string' && !Array.isArray(path) && typeof path !== 'number') throw new Error('The path provided to "createNamespace" function must be a string or array');
-    if (parentPath && !(parentPath[pathStringSymbol] && parentPath[pathLensSymbol])) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "createNamespace"');
+    if (parentPath && !(parentPath[pathStringSymbol] && parentPath.lens)) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "createNamespace"');
     if (Array.isArray(path) && !checkPathArray(path)) throw new Error('When using an array to "createNamespace", only strings and numbers are permitted');
   }
 
@@ -133,7 +132,7 @@ function createPathspace() {
     if (typeof path === 'number') lens = lensIndex(path);
     if (typeof path === 'string') lens = lensProp(path);
     return parentPath
-      ? x => parentPath[pathLensSymbol](lens(x))
+      ? x => parentPath.lens(lens(x))
       : lens;
   }
 
@@ -147,21 +146,32 @@ function createPathspace() {
     return { lens, prefix };
   }
 
+  function createNoSideEffect() {
+    return () => {};
+  }
+
   function createNamespace(p, parentPath) {
     const { lens, prefix } = setNamespace(p, parentPath);
+    const actionCreators = {};
 
-    function mapActionToReducer(actionType, reducer = defaultReducer, meta = {}) {
-      validateAddActionArgs(actionType, reducer, meta);
+    function mapActionToReducer(actionType, _reducer = defaultReducer, meta = {}) {
+      validateAddActionArgs(actionType, _reducer, meta);
 
       let _createSideEffect = createNoSideEffect;
       const type = getActionName(prefix, actionType);
 
-      getNamespace(prefix).set(type, reducer);
+      getNamespace(prefix).set(type, _reducer);
+
+      function runSideEffect(...args) {
+        const sideEffect = _createSideEffect(_store, _actionCreators);
+        const sideEffectResult = sideEffect(...args);
+        return sideEffectResult || args[0];
+      }
 
       function actionCreator(...args) {
         return {
           type,
-          payload: _createSideEffect(_store, _actionCreators)(...args),
+          payload: runSideEffect(...args),
           meta,
         };
       }
@@ -172,32 +182,40 @@ function createPathspace() {
         return actionCreator;
       }
 
+      /* function dispatchBeforeReduction(actions) {
+       *   function dispatchSideEffect({ dispatch }, _actionCreators) {
+       *     return () => {}
+       *   }
+       * }
+       */
+
       actionCreator.withSideEffect = withSideEffect;
+      actionCreators[actionType] = actionCreator;
 
       return actionCreator;
     }
+
+    mapActionToReducer('SET');
+    mapActionToReducer('RESET', () => view(lens, initialState));
 
     return {
       mapActionToReducer,
       examine: view(lens),
       [pathStringSymbol]: prefix,
-      [pathLensSymbol]: lens,
+      actionCreators,
       lens,
     };
   }
 
-  function createReducer(initialState = {}) {
-    const initState = typeof initialState === 'function' ? initialState() : initialState;
-    return function reducer(state, { type, payload }) {
-      const actions = getNamespace(getNamespaceName(type));
-      if (actions && actions.has(type)) {
-        const result = actions.get(type)(state, payload);
-        return result;
-      }
-      return state === undefined
-        ? initState
-        : state;
-    };
+  function reducer(state, { type, payload }) {
+    const actions = getNamespace(getNamespaceName(type));
+    if (actions && actions.has(type)) {
+      const result = actions.get(type)(state, payload);
+      return result;
+    }
+    return state === undefined
+      ? initialState
+      : state;
   }
 
   function setStore(store, actionCreators) {
@@ -264,7 +282,7 @@ function createPathspace() {
 
   return {
     createNamespace,
-    createReducer,
+    reducer,
     setStore,
     mapNamespaces,
   };
@@ -278,4 +296,5 @@ export {
   setStore,
   mapNamespaces,
   createPathspace,
+  reducers,
 };

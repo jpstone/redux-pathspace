@@ -16,8 +16,6 @@ var _lensProp = _interopRequireDefault(require("ramda/src/lensProp"));
 
 var _lensIndex = _interopRequireDefault(require("ramda/src/lensIndex"));
 
-var _lodash = _interopRequireDefault(require("lodash.isplainobject"));
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i] != null ? arguments[i] : {}; var ownKeys = Object.keys(source); if (typeof Object.getOwnPropertySymbols === 'function') { ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) { return Object.getOwnPropertyDescriptor(source, sym).enumerable; })); } ownKeys.forEach(function (key) { _defineProperty(target, key, source[key]); }); } return target; }
@@ -38,13 +36,16 @@ function createPathspace() {
   var PATH_JOINER = '.';
   var PREFIX_SEPERATOR = ':';
   var pathStringSymbol = Symbol('@@Pathspace->createNamespace->path[pathString]');
-  var pathLensSymbol = Symbol('@@Pathspace->createNamespace->path[pathLens]');
 
   var _namespaces = new Map();
 
   var _store;
 
   var _actionCreators;
+
+  function isPlainObject(obj) {
+    return !Array.isArray(obj) && _typeof(obj) === 'object';
+  }
 
   function getPathPrefix(path) {
     if (!Array.isArray(path)) return path;
@@ -104,12 +105,6 @@ function createPathspace() {
     return payload;
   }
 
-  function createNoSideEffect() {
-    return function (payload) {
-      return payload;
-    };
-  }
-
   function getNamespaceName(actionType) {
     var split = actionType.split(PREFIX_SEPERATOR)[0].split(PATH_JOINER);
     return split.length > 1 ? split : split[0];
@@ -149,7 +144,7 @@ function createPathspace() {
   function validatePath(path, parentPath) {
     if (typeof path !== 'number' && !path) throw new Error('No path was provided to "createNamespace" function, which is required');
     if (typeof path !== 'string' && !Array.isArray(path) && typeof path !== 'number') throw new Error('The path provided to "createNamespace" function must be a string or array');
-    if (parentPath && !(parentPath[pathStringSymbol] && parentPath[pathLensSymbol])) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "createNamespace"');
+    if (parentPath && !(parentPath[pathStringSymbol] && parentPath.lens)) throw new Error('When creating a sub path, the parent path must be a valid "path" function returned from "createNamespace"');
     if (Array.isArray(path) && !checkPathArray(path)) throw new Error('When using an array to "createNamespace", only strings and numbers are permitted');
   }
 
@@ -169,7 +164,7 @@ function createPathspace() {
     if (typeof path === 'number') lens = (0, _lensIndex.default)(path);
     if (typeof path === 'string') lens = (0, _lensProp.default)(path);
     return parentPath ? function (x) {
-      return parentPath[pathLensSymbol](lens(x));
+      return parentPath.lens(lens(x));
     } : lens;
   }
 
@@ -188,12 +183,18 @@ function createPathspace() {
     };
   }
 
+  function createNoSideEffect() {
+    return function () {};
+  }
+
   function createNamespace(p, parentPath) {
     var _ref;
 
     var _setNamespace = setNamespace(p, parentPath),
         lens = _setNamespace.lens,
         prefix = _setNamespace.prefix;
+
+    var actionCreators = {};
 
     function mapActionToReducer(actionType) {
       var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : defaultReducer;
@@ -203,10 +204,17 @@ function createPathspace() {
       var type = getActionName(prefix, actionType);
       getNamespace(prefix).set(type, reducer);
 
+      function runSideEffect() {
+        var sideEffect = _createSideEffect(_store, _actionCreators);
+
+        var sideEffectResult = sideEffect.apply(void 0, arguments);
+        return sideEffectResult || (arguments.length <= 0 ? undefined : arguments[0]);
+      }
+
       function actionCreator() {
         return {
           type: type,
-          payload: _createSideEffect(_store, _actionCreators).apply(void 0, arguments),
+          payload: runSideEffect.apply(void 0, arguments),
           meta: meta
         };
       }
@@ -218,13 +226,14 @@ function createPathspace() {
       }
 
       actionCreator.withSideEffect = withSideEffect;
+      actionCreators[actionType] = actionCreator;
       return actionCreator;
     }
 
     return _ref = {
       mapActionToReducer: mapActionToReducer,
       examine: (0, _view.default)(lens)
-    }, _defineProperty(_ref, pathStringSymbol, prefix), _defineProperty(_ref, pathLensSymbol, lens), _defineProperty(_ref, "lens", lens), _ref;
+    }, _defineProperty(_ref, pathStringSymbol, prefix), _defineProperty(_ref, "actionCreators", actionCreators), _defineProperty(_ref, "lens", lens), _ref;
   }
 
   function createReducer() {
@@ -286,7 +295,7 @@ function createPathspace() {
 
       if (Array.isArray(target)) {
         nested = target.find(function (val) {
-          return Array.isArray(val) || (0, _lodash.default)(val);
+          return Array.isArray(val) || isPlainObject(val);
         });
       }
 
@@ -294,11 +303,11 @@ function createPathspace() {
       return createArrayNamespace(prevKey, nested, mapNamespacesToTarget, isString);
     }
 
-    if ((0, _lodash.default)(target)) {
+    if (isPlainObject(target)) {
       return Object.keys(target).reduce(function (cloned, key) {
         var path = _toConsumableArray(prevKey).concat([key]);
 
-        if ((0, _lodash.default)(target[key])) {
+        if (isPlainObject(target[key])) {
           return _objectSpread({}, cloned, _defineProperty({}, key, mapNamespacesToTarget(target[key], path)));
         }
 
@@ -314,7 +323,7 @@ function createPathspace() {
   }
 
   function mapNamespaces(target) {
-    if (!Array.isArray(target) && !(0, _lodash.default)(target) && typeof target !== 'string') {
+    if (!Array.isArray(target) && !isPlainObject(target) && typeof target !== 'string') {
       throw new TypeError("mapNamespaces only maps namespaces to arrays and objects. Instead you provided ".concat(target, ", which is of type ").concat(_typeof(target)));
     }
 

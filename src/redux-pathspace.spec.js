@@ -180,7 +180,7 @@ tape('redux-pathspace', (t) => {
     tt.test('namespace', (ttt) => {
       const namespace = createNamespace('x');
 
-      ttt.equal(3, Object.keys(namespace).length, 'returns an object with 3 properties');
+      ttt.equal(4, Object.keys(namespace).length, 'returns an object with 4 properties');
       ttt.equal(...isFunction(namespace.mapActionToReducer), 'returns a `mapActionToReducer` function');
       ttt.equal(...isFunction(namespace.examine), 'returns a `examine` function');
       ttt.equal(...isFunction(namespace.examine), 'provides a function');
