@@ -24,6 +24,8 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
 
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
@@ -32,7 +34,27 @@ function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.
 
 function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
 
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+function compose() {
+  for (var _len = arguments.length, funcs = new Array(_len), _key = 0; _key < _len; _key++) {
+    funcs[_key] = arguments[_key];
+  }
+
+  if (funcs.length === 0) {
+    return function (arg) {
+      return arg;
+    };
+  }
+
+  if (funcs.length === 1) {
+    return funcs[0];
+  }
+
+  return funcs.reduce(function (a, b) {
+    return function () {
+      return a(b.apply(void 0, arguments));
+    };
+  });
+}
 
 function createPathspace() {
   var PATH_JOINER = '.';
@@ -53,31 +75,6 @@ function createPathspace() {
     }, '').slice(0, -1);
   }
 
-  function reducerWrapper(lens, reducer) {
-    var getter = (0, _view.default)(lens);
-    var setter = (0, _set.default)(lens);
-    return function wrappedReducer(state, payload) {
-      return setter(reducer(getter(state), payload, state), state);
-    };
-  }
-
-  function createActionContainer(lens) {
-    var _actions = new Map();
-
-    return {
-      set: function set(actionName, reducer) {
-        if (_actions.has(actionName)) throw new Error("The action \"".concat(actionName, "\" already exists for this path"));
-        return _actions.set(actionName, reducerWrapper(lens, reducer));
-      },
-      get: function get(actionName) {
-        return _actions.get(actionName);
-      },
-      has: function has(actionName) {
-        return _actions.has(actionName);
-      }
-    };
-  }
-
   function checkPathArray(arr) {
     var isValid = arr.reduce(function (bool, val) {
       if (!bool) return false;
@@ -96,6 +93,45 @@ function createPathspace() {
     return _namespaces.get(getPathPrefix(path));
   }
 
+  function getNamespaceName(actionType) {
+    var split = actionType.split(PREFIX_SEPERATOR)[0].split(PATH_JOINER);
+    return split.length > 1 ? split : split[0];
+  }
+
+  function reducerWrapper(lens, reducer, getPipeline) {
+    var getter = (0, _view.default)(lens);
+    var setter = (0, _set.default)(lens);
+    return function wrappedReducer(state, payload) {
+      var pipe = [function (x) {
+        return setter(reducer(getter(x), payload, x), x);
+      }].concat(_toConsumableArray(getPipeline().map(function (funcOrObj) {
+        return typeof funcOrObj === 'function' ? function (x) {
+          return funcOrObj(x, payload);
+        } : function (x) {
+          return getNamespace(getNamespaceName(funcOrObj.type)).get(funcOrObj.type)(x, funcOrObj.payload);
+        };
+      })));
+      return compose.apply(void 0, _toConsumableArray(pipe))(state);
+    };
+  }
+
+  function createActionContainer(lens) {
+    var _actions = new Map();
+
+    return {
+      set: function set(actionName, reducer, getPipeline) {
+        if (_actions.has(actionName)) throw new Error("The action \"".concat(actionName, "\" already exists for this path"));
+        return _actions.set(actionName, reducerWrapper(lens, reducer, getPipeline));
+      },
+      get: function get(actionName) {
+        return _actions.get(actionName);
+      },
+      has: function has(actionName) {
+        return _actions.has(actionName);
+      }
+    };
+  }
+
   function getActionName(path, actionName) {
     return !path.length ? actionName : "".concat(getPathPrefix(path)).concat(PREFIX_SEPERATOR).concat(actionName);
   }
@@ -108,11 +144,6 @@ function createPathspace() {
     return function (payload) {
       return payload;
     };
-  }
-
-  function getNamespaceName(actionType) {
-    var split = actionType.split(PREFIX_SEPERATOR)[0].split(PATH_JOINER);
-    return split.length > 1 ? split : split[0];
   }
 
   function validateAddActionArgs(actionType, reducer, meta) {
@@ -199,9 +230,15 @@ function createPathspace() {
       var reducer = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : defaultReducer;
       var meta = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
       validateAddActionArgs(actionType, reducer, meta);
+      var _pipeline = [];
       var _createSideEffect = createNoSideEffect;
       var type = getActionName(prefix, actionType);
-      getNamespace(prefix).set(type, reducer);
+
+      function getPipeline() {
+        return _pipeline;
+      }
+
+      getNamespace(prefix).set(type, reducer, getPipeline);
 
       function actionCreator() {
         return {
@@ -217,14 +254,24 @@ function createPathspace() {
         return actionCreator;
       }
 
+      function withPipeline() {
+        _pipeline.push.apply(_pipeline, arguments);
+
+        return actionCreator;
+      }
+
       actionCreator.withSideEffect = withSideEffect;
+      actionCreator.withPipeline = withPipeline;
       return actionCreator;
     }
 
-    return _ref = {
-      mapActionToReducer: mapActionToReducer,
-      examine: (0, _view.default)(lens)
-    }, _defineProperty(_ref, pathStringSymbol, prefix), _defineProperty(_ref, pathLensSymbol, lens), _defineProperty(_ref, "lens", lens), _ref;
+    function wrapReducer(func) {
+      return function (state, payload) {
+        return (0, _set.default)(lens, func((0, _view.default)(lens, state), payload, state), state);
+      };
+    }
+
+    return _ref = {}, _defineProperty(_ref, pathStringSymbol, prefix), _defineProperty(_ref, pathLensSymbol, lens), _defineProperty(_ref, "examine", (0, _view.default)(lens)), _defineProperty(_ref, "mapActionToReducer", mapActionToReducer), _defineProperty(_ref, "wrapReducer", wrapReducer), _defineProperty(_ref, "lens", lens), _ref;
   }
 
   function createReducer() {

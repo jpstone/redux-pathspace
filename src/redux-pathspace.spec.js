@@ -148,21 +148,21 @@ tape('redux-pathspace', (t) => {
     tt.end();
   });
 
-  t.test('createNamespace', (tt) => {
-    const { createNamespace, createReducer } = createPathspace();
+  t.test('createNamespace', (createNamespaceTest) => {
+    let mock = createPathspace();
 
-    tt.doesNotThrow(() => createNamespace('foo'), 'accepts a string');
-    tt.doesNotThrow(() => createNamespace('foo.bar.baz'), 'accepts a stringed path representation');
-    tt.doesNotThrow(() => createNamespace(['foo', 2]), 'accepts an array of strings or numbers');
-    tt.doesNotThrow(() => createNamespace(0), 'accepts a number');
-    tt.throws(() => createNamespace({}), Error, 'throws when passed an object');
-    tt.throws(() => createNamespace(['foo', 'bar', 'baz', {}]), Error, 'throws when passed an array that does not consist of only strings or numbers');
-    tt.throws(() => createNamespace('foo'), Error, 'throws when passed an existing path');
-    tt.throws(() => createNamespace(['foo.bar.baz', 1]), Error, 'throws when using dot notation for path index in array');
+    createNamespaceTest.doesNotThrow(() => mock.createNamespace('foo'), 'accepts a string');
+    createNamespaceTest.doesNotThrow(() => mock.createNamespace('foo.bar.baz'), 'accepts a stringed path representation');
+    createNamespaceTest.doesNotThrow(() => mock.createNamespace(['foo', 2]), 'accepts an array of strings or numbers');
+    createNamespaceTest.doesNotThrow(() => mock.createNamespace(0), 'accepts a number');
+    createNamespaceTest.throws(() => mock.createNamespace({}), Error, 'throws when passed an object');
+    createNamespaceTest.throws(() => mock.createNamespace(['foo', 'bar', 'baz', {}]), Error, 'throws when passed an array that does not consist of only strings or numbers');
+    createNamespaceTest.throws(() => mock.createNamespace('foo'), Error, 'throws when passed an existing path');
+    createNamespaceTest.throws(() => mock.createNamespace(['foo.bar.baz', 1]), Error, 'throws when using dot notation for path index in array');
 
     const state = {
-      xx: {
-        yy: 'z',
+      x: {
+        y: 'z',
       },
     };
 
@@ -170,76 +170,121 @@ tape('redux-pathspace', (t) => {
       if (slice !== 'z') throw new Error();
     }
 
-    const rootReducer = createReducer(state);
-    const x = createNamespace('xx');
-    const y = createNamespace('yy', x);
+    const rootReducer = mock.createReducer(state);
+    const x = mock.createNamespace('x');
+    const y = mock.createNamespace('y', x);
     const yActionCreator = y.mapActionToReducer('FOO', yReducer);
 
-    tt.doesNotThrow(() => rootReducer(state, yActionCreator()), 'should properly compose lenses');
+    createNamespaceTest.doesNotThrow(() => rootReducer(state, yActionCreator()), 'should properly compose lenses');
 
-    tt.test('namespace', (ttt) => {
-      const namespace = createNamespace('x');
+    createNamespaceTest.test('namespace', (namespaceTest) => {
+      mock = createPathspace();
 
-      ttt.equal(3, Object.keys(namespace).length, 'returns an object with 3 properties');
-      ttt.equal(...isFunction(namespace.mapActionToReducer), 'returns a `mapActionToReducer` function');
-      ttt.equal(...isFunction(namespace.examine), 'returns a `examine` function');
-      ttt.equal(...isFunction(namespace.examine), 'provides a function');
+      const namespace = mock.createNamespace('x');
 
-      ttt.test('examine', (tttt) => {
+      namespaceTest.equal(4, Object.keys(namespace).length, 'returns an object with 4 properties');
+      namespaceTest.equal(...isFunction(namespace.mapActionToReducer), 'returns a `mapActionToReducer` function');
+      namespaceTest.equal(...isFunction(namespace.examine), 'returns a `examine` function');
+      namespaceTest.equal(...isFunction(namespace.examine), 'provides a function');
+
+      namespaceTest.test('examine', (examineTest) => {
         const fooState = {
           m: 'foo',
         };
-        const xPath = createNamespace('m');
+        const xPath = mock.createNamespace('m');
         const xView = xPath.examine(fooState);
 
-        tttt.equal(xView, 'foo', 'should properly examine path');
-        tttt.end();
+        examineTest.equal(xView, 'foo', 'should properly examine path');
+        examineTest.end();
       });
 
-      ttt.test('mapActionToReducer', (tttt) => {
-        const ns = createNamespace('X');
+      namespaceTest.test('mapActionToReducer', (mapActionToReducerTest) => {
+        mock = createPathspace();
 
-        tttt.doesNotThrow(() => ns.mapActionToReducer('foo'), 'accepts a string');
-        tttt.doesNotThrow(() => ns.mapActionToReducer('bar', () => {}), 'accepts an object with an optional reducer');
-        tttt.doesNotThrow(() => ns.mapActionToReducer('baz', () => {}, {}), 'accepts an object with an optional meta property');
-        tttt.equal(...isFunction(ns.mapActionToReducer('x')), 'returns a function');
-        tttt.throws(() => ns.mapActionToReducer('foo'), Error, 'throws when supplied an existing actionType for the given namespace');
-        tttt.throws(() => ns.mapActionToReducer('alpha', 0), Error, 'throws when optional reducer property is not a function');
-        tttt.throws(() => ns.mapActionToReducer('omega', () => {}, []), Error, 'throws when optional meta property is not a plain object');
+        const ns = mock.createNamespace('x');
 
-        tttt.test('actionCreator', (ttttt) => {
-          const actionCreator = createNamespace('xPath').mapActionToReducer('FOO');
+        mapActionToReducerTest.doesNotThrow(() => ns.mapActionToReducer('foo'), 'accepts a string');
+        mapActionToReducerTest.doesNotThrow(() => ns.mapActionToReducer('bar', () => {}), 'accepts an object with an optional reducer');
+        mapActionToReducerTest.doesNotThrow(() => ns.mapActionToReducer('baz', () => {}, {}), 'accepts an object with an optional meta property');
+        mapActionToReducerTest.equal(...isFunction(ns.mapActionToReducer('x')), 'returns a function');
+        mapActionToReducerTest.throws(() => ns.mapActionToReducer('foo'), Error, 'throws when supplied an existing actionType for the given namespace');
+        mapActionToReducerTest.throws(() => ns.mapActionToReducer('alpha', 0), Error, 'throws when optional reducer property is not a function');
+        mapActionToReducerTest.throws(() => ns.mapActionToReducer('omega', () => {}, []), Error, 'throws when optional meta property is not a plain object');
+
+        mapActionToReducerTest.test('actionCreator', (actionCreatorTest) => {
+          mock = createPathspace();
+
+          let actionCreator = mock.createNamespace('xPath').mapActionToReducer('FOO');
           const action = actionCreator('fooBar');
 
-          ttttt.equal(action.type, 'xPath:FOO', 'returns a prefixed action.type');
-          ttttt.isEquivalent(action.meta, {}, 'returns a default meta object');
-          ttttt.equal(action.payload, 'fooBar', 'returns the supplied action.payload data');
-          ttttt.end();
+          actionCreatorTest.equal(action.type, 'xPath:FOO', 'returns a prefixed action.type');
+          actionCreatorTest.isEquivalent(action.meta, {}, 'returns a default meta object');
+          actionCreatorTest.equal(action.payload, 'fooBar', 'returns the supplied action.payload data');
+          actionCreatorTest.end();
+
+          actionCreatorTest.test('withSideEffect', (withSideEffectTest) => {
+            mock = createPathspace();
+            actionCreator = mock.createNamespace('y').mapActionToReducer('FOO');
+
+            withSideEffectTest.throws(() => actionCreator.withSideEffect(0), Error, 'throws when optional side-effecet is not a function');
+            actionCreator.withSideEffect(() => () => 'foo');
+            withSideEffectTest.equal(actionCreator().payload, 'foo', 'properly adds side effect');
+            withSideEffectTest.end();
+          });
+
+          actionCreatorTest.test('withPipeline', (withPipelineTest) => {
+            mock = createPathspace();
+
+            const { createStore } = require('redux');
+            const xState = { foo: 'foo', bar: 'bar', zab: 'zab' };
+            const store = createStore(mock.createReducer(xState), xState);
+            const nsFoo = mock.createNamespace('foo');
+            const nsBar = mock.createNamespace('bar');
+            const nsZab = mock.createNamespace('zab');
+
+            function helloWorld(x, y, z) {
+              return 'hello world';
+            }
+
+            function byeWorld(x, y, z) {
+              return 'bye world';
+            }
+
+            actionCreator = nsFoo.mapActionToReducer('hi', helloWorld).withPipeline(nsBar.wrapReducer(byeWorld));
+
+            const zabActionCreator = nsZab.mapActionToReducer('ok');
+            const barActionCreator = nsBar.mapActionToReducer('ok', () => 'im bar').withPipeline(zabActionCreator('yep'));
+
+            withPipelineTest.ok(typeof actionCreator.withPipeline === 'function', 'has a withPipeline method');
+
+            store.dispatch(actionCreator());
+
+            withPipelineTest.deepEqual(store.getState(), { foo: 'hello world', bar: 'bye world', zab: 'zab' }, 'properly runs basic pipeline');
+
+            store.dispatch(barActionCreator());
+
+            withPipelineTest.deepEqual(store.getState(), { foo: 'hello world', bar: 'im bar', zab: 'yep' }, 'properly runs basic pipeline');
+            withPipelineTest.end();
+          });
         });
 
-        tttt.test('withSideEffect', (ttttt) => {
-          const actionCreator = createNamespace('y').mapActionToReducer('FOO');
-
-          ttttt.throws(() => actionCreator.withSideEffect(0), Error, 'throws when optional side-effecet is not a function');
-          actionCreator.withSideEffect(() => () => 'foo');
-          ttttt.equal(actionCreator().payload, 'foo', 'properly adds side effect');
-          ttttt.end();
-        });
-        tttt.end();
+        mapActionToReducerTest.end();
       });
 
-      ttt.test('lens', (tttt) => {
+      namespaceTest.test('lens', (lensTest) => {
+        mock = createPathspace();
+
         const view = require('ramda/src/view');
         const rState = { r: 'foo' };
-        const rPath = createNamespace('r');
+        const rPath = mock.createNamespace('r');
         const rLens = rPath.lens;
 
-        tttt.equal(view(rLens, rState), 'foo', 'getLens should properly provide lens');
-        tttt.end();
+        lensTest.equal(view(rLens, rState), 'foo', 'getLens should properly provide lens');
+        lensTest.end();
       });
-      ttt.end();
+      namespaceTest.end();
     });
-    tt.end();
+    createNamespaceTest.end();
   });
 
   t.test('createReducer', (tt) => {

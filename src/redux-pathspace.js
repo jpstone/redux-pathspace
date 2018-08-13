@@ -5,6 +5,18 @@ import lensProp from 'ramda/src/lensProp';
 import lensIndex from 'ramda/src/lensIndex';
 import isPlainObject from 'lodash.isplainobject';
 
+function compose(...funcs) {
+  if (funcs.length === 0) {
+    return arg => arg;
+  }
+
+  if (funcs.length === 1) {
+    return funcs[0];
+  }
+
+  return funcs.reduce((a, b) => (...args) => a(b(...args)));
+}
+
 function createPathspace() {
   const PATH_JOINER = '.';
   const PREFIX_SEPERATOR = ':';
@@ -24,30 +36,6 @@ function createPathspace() {
     ), '').slice(0, -1);
   }
 
-  function reducerWrapper(lens, reducer) {
-    const getter = view(lens);
-    const setter = set(lens);
-    return function wrappedReducer(state, payload) {
-      return setter(reducer(getter(state), payload, state), state);
-    };
-  }
-
-  function createActionContainer(lens) {
-    const _actions = new Map();
-    return {
-      set(actionName, reducer) {
-        if (_actions.has(actionName)) throw new Error(`The action "${actionName}" already exists for this path`);
-        return _actions.set(actionName, reducerWrapper(lens, reducer));
-      },
-      get(actionName) {
-        return _actions.get(actionName);
-      },
-      has(actionName) {
-        return _actions.has(actionName);
-      },
-    };
-  }
-
   function checkPathArray(arr) {
     const isValid = arr.reduce((bool, val) => {
       if (!bool) return false;
@@ -64,6 +52,46 @@ function createPathspace() {
     return _namespaces.get(getPathPrefix(path));
   }
 
+  function getNamespaceName(actionType) {
+    const split = actionType.split(PREFIX_SEPERATOR)[0].split(PATH_JOINER);
+    return split.length > 1
+      ? split
+      : split[0];
+  }
+
+  function reducerWrapper(lens, reducer, getPipeline) {
+    const getter = view(lens);
+    const setter = set(lens);
+    return function wrappedReducer(state, payload) {
+      const pipe = [
+        x => setter(reducer(getter(x), payload, x), x),
+        ...getPipeline().map(funcOrObj => (
+          typeof funcOrObj === 'function'
+            ? x => funcOrObj(x, payload)
+            : x => getNamespace(getNamespaceName(funcOrObj.type))
+              .get(funcOrObj.type)(x, funcOrObj.payload)
+        )),
+      ];
+      return compose(...pipe)(state);
+    };
+  }
+
+  function createActionContainer(lens) {
+    const _actions = new Map();
+    return {
+      set(actionName, reducer, getPipeline) {
+        if (_actions.has(actionName)) throw new Error(`The action "${actionName}" already exists for this path`);
+        return _actions.set(actionName, reducerWrapper(lens, reducer, getPipeline));
+      },
+      get(actionName) {
+        return _actions.get(actionName);
+      },
+      has(actionName) {
+        return _actions.has(actionName);
+      },
+    };
+  }
+
   function getActionName(path, actionName) {
     return !path.length
       ? actionName
@@ -76,13 +104,6 @@ function createPathspace() {
 
   function createNoSideEffect() {
     return payload => payload;
-  }
-
-  function getNamespaceName(actionType) {
-    const split = actionType.split(PREFIX_SEPERATOR)[0].split(PATH_JOINER);
-    return split.length > 1
-      ? split
-      : split[0];
   }
 
   function validateAddActionArgs(actionType, reducer, meta) {
@@ -152,11 +173,16 @@ function createPathspace() {
 
     function mapActionToReducer(actionType, reducer = defaultReducer, meta = {}) {
       validateAddActionArgs(actionType, reducer, meta);
+      const _pipeline = [];
 
       let _createSideEffect = createNoSideEffect;
       const type = getActionName(prefix, actionType);
 
-      getNamespace(prefix).set(type, reducer);
+      function getPipeline() {
+        return _pipeline;
+      }
+
+      getNamespace(prefix).set(type, reducer, getPipeline);
 
       function actionCreator(...args) {
         return {
@@ -172,16 +198,27 @@ function createPathspace() {
         return actionCreator;
       }
 
+      function withPipeline(...args) {
+        _pipeline.push(...args);
+        return actionCreator;
+      }
+
       actionCreator.withSideEffect = withSideEffect;
+      actionCreator.withPipeline = withPipeline;
 
       return actionCreator;
     }
 
+    function wrapReducer(func) {
+      return (state, payload) => set(lens, func(view(lens, state), payload, state), state);
+    }
+
     return {
-      mapActionToReducer,
-      examine: view(lens),
       [pathStringSymbol]: prefix,
       [pathLensSymbol]: lens,
+      examine: view(lens),
+      mapActionToReducer,
+      wrapReducer,
       lens,
     };
   }
